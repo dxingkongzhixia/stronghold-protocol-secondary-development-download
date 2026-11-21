@@ -9,12 +9,11 @@ Read `docs/DEVELOPER.md` first if you do not know the layout. The **fork-only me
 lives, how to extend it, the tests that pin it, and the merge "must not be lost" note) are catalogued in
 [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) — consult it during every upstream merge (see (b)).
 
-> **Note for a newcomer:** start with [`docs/HANDOVER.md`](HANDOVER.md) — the entry point (repo map, run locally,
-> build/verify, content, upstream merges, publish/deploy, known issues). This file is the operational contract it
-> points at.
+> **Note for a newcomer:** start with [`docs/DEVELOPER.md`](DEVELOPER.md) (repo map, run locally, build/verify) and
+> [`docs/AI-AGENT.md`](AI-AGENT.md) (the agent manual). This file is the operational contract they point at.
 
 > **Navigation.** (a) Handling a feature / bug request · (b) Fork / merge discipline with upstream · (c) Commit & push discipline (GitHub primary + Gitee code mirror) · (d) Production deploy procedure · (e) When to ask the owner.
-> See also [`docs/HANDOVER.md`](HANDOVER.md) (the entry point) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
+> See also [`docs/DEVELOPER.md`](DEVELOPER.md) (the entry point) and [`docs/QUERY-INDEX.md`](QUERY-INDEX.md) (lookup).
 
 Companion conventions, quoted verbatim:
 

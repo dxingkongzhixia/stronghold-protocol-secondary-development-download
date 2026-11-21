@@ -2,7 +2,7 @@
 
 > **状态**：维护中的文档总入口（2026-11-05 按**读者**与**核心能力**重排；旧的分层表改为 §3 的图例）。
 > 新增或移动文档时，按 §7.3 的清单登记：**本页 §2 → [`QUERY-INDEX.md`](QUERY-INDEX.md) → [`../AGENTS.md`](../AGENTS.md)
-> → [`AI-AGENT.md`](AI-AGENT.md) §7 → [`HANDOVER.md`](HANDOVER.md) 参考表**。
+> → [`AI-AGENT.md`](AI-AGENT.md) §7 → [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)（归档参考）**。
 
 本页回答三个问题：
 
@@ -147,8 +147,11 @@
 | 主线合并**历史**日志 + **永不合并清单 §0** | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) |
 | 主线未并入台账（参考；已冻结） | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
 | **规程（卫戍协议·规程）并入清单** | [`UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md) |
+| 规程 band（策略）实现计划 | [`UPSTREAM-BANDS.md`](UPSTREAM-BANDS.md) |
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
+| 部署日志（只追加） | [`DEPLOYS.md`](DEPLOYS.md) |
+| 已归档（不再维护） | [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md) · [`HANDOFF-2026-11-18.md`](HANDOFF-2026-11-18.md) |
 
 ---
 
@@ -178,7 +181,7 @@
 | **新插件怎么写** | [`keel/FEATURES.md`](keel/FEATURES.md) · [`keel/MANIFEST-V3.md`](keel/MANIFEST-V3.md) · [`keel/CONTRACTS.md`](keel/CONTRACTS.md) | [`PLUGINS.md`](PLUGINS.md) / [`PLUGIN-API.md`](PLUGIN-API.md) / [`PLUGIN-DSL.md`](PLUGIN-DSL.md)（v2 兼容）· 教程 | — |
 | **房间插件为什么慢 / 构建怎么工作** | [`PLUGIN-BUILD.md`](PLUGIN-BUILD.md) | [`PLUGINS.md`](PLUGINS.md) §11 · [`DEPLOY.md`](DEPLOY.md) 环境变量表 | [`PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) |
 | **测试怎么跑 / golden 怎么动** | [`TESTING.md`](TESTING.md) | [`AI-AGENT.md`](AI-AGENT.md) §6 | — |
-| **上线顺序 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | [`DEPLOY.md`](DEPLOY.md) | [`PROJECT-STATE.md`](PROJECT-STATE.md) 的部署记录 |
+| **上线顺序 / 回滚** | [`AI-WORKFLOW.md`](AI-WORKFLOW.md) §(d) | [`DEPLOY.md`](DEPLOY.md) | [`DEPLOYS.md`](DEPLOYS.md)（部署日志） |
 | **现在线上是什么** | [`PROJECT-STATE.md`](PROJECT-STATE.md) | [`DEPLOY.md`](DEPLOY.md)（怎么做） | [`../CHANGELOG.md`](../CHANGELOG.md) |
 | **哪些东西合并时不能丢** | [`OUR-FEATURES.md`](OUR-FEATURES.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 | — |
 | **主线还有哪些没并（参考）** | [`UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) | [`UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md)（历史日志） | — |
@@ -250,7 +253,7 @@
 2. [`QUERY-INDEX.md`](QUERY-INDEX.md)（至少一条「问题 → 文件」）；
 3. [`../AGENTS.md`](../AGENTS.md) §3 的速查表（如果是代理需要主动找到的）；
 4. [`AI-AGENT.md`](AI-AGENT.md) §7 的同步矩阵（如果它成为某类改动的必改项）；
-5. [`HANDOVER.md`](HANDOVER.md) 的参考表（长期文档）；
+5. 若涉及历史细节：[`HANDOVER-2026-10.md`](HANDOVER-2026-10.md)（归档；不再维护）；
 6. 运行 `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js`。
 
 ### 7.4 文档门禁

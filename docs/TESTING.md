@@ -95,7 +95,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | 规则 / 数值 / kit / 敌人 | `test/content/`（干员/敌人）或 `test/sim/`（引擎） | `test/content/kits_alt_t5.test.js` |
 | 对局流程 / 经济 / bot | `test/match/` | `test/match/bot.test.js`、`fixtures` 在 `test/match/harness.js` |
 | 渲染 / HUD / 插值 | `test/render/`（纯逻辑）或 `*.browser.test.js`（真 Chrome） | `test/render/attack-rate.test.js` |
-| 插件 / Keel / 内容集 | `test/plugins/`、`test/keel/` | `test/plugins/upstream-compat.test.js` |
+| 插件 / Keel / 内容集 | `test/plugins/`、`test/keel/` | `test/plugins/manifest.test.js` |
 | 手机 / 响应式 | `test/mobile/` + `public/dev/mobile-audit.html` | `docs/MOBILE-UI.md` §7 |
 | 文档 | `test/docs-*.test.js`（通常不用加，改内容即可） | `docs/README.md` §7.4 |
 

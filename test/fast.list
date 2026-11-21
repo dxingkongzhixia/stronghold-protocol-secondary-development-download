@@ -4,6 +4,7 @@ test/docs-links.test.js
 test/docs-consistency.test.js
 test/docs-paths.test.js
 test/docs-mojibake.test.js
+test/docs-facts.test.js
 test/ci.test.js
 test/package.test.js
 test/i18n.test.js

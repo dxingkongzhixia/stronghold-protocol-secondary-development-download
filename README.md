@@ -97,7 +97,7 @@ node server/index.js   # 启动服务器：http://localhost:3000
 ### 测试
 
 ```bash
-npm test              # 完整测试套件（约 8879 项；缺素材 / 浏览器的用例会自动跳过）
+npm test              # 完整套件（缺素材 / 浏览器的用例会自动跳过；数量见输出，不在文档里写死）
 npm run golden        # 黄金结果：固定种子的整套战斗与人机对局摘要（改动玩法后按规则更新）
 ```
 
@@ -194,7 +194,7 @@ node tools/push-gitee.mjs -m "本次改了什么"   # 提交已暂存的改动�
 | [`docs/keel/README.md`](docs/keel/README.md) | **Keel 入口**：当前状态、快速命令、规格/作者/历史导航 |
 | [`docs/keel/DEBUGGING.md`](docs/keel/DEBUGGING.md) | **Keel 调试**：错误分层、Worker 失败、指标、lock/pin、分发 |
 | [`docs/PLUGIN-DEV-GUIDE.md`](docs/PLUGIN-DEV-GUIDE.md) | **v2 兼容插件开发参考**：模板、manifest、类别、测试、打包、发布 |
-| [`docs/HANDOVER.md`](docs/HANDOVER.md) | 详细接手 / 运维参考（入口以 `DEVELOPER.md` 为准） |
+| [`docs/HANDOVER.md`](docs/HANDOVER.md) | **已归档**（2026-10 快照）；入口见 `DEVELOPER.md` / `AGENTS.md` |
 | [`docs/README.md`](docs/README.md) | **文档系统总索引**：真人开发者 / AI Agent 两条阅读路径、按核心能力（规则 / 引擎 / 插件 / 测试 / 上线…）分组的权威入口与维护规则 |
 | [`docs/QUERY-INDEX.md`](docs/QUERY-INDEX.md) | **问题 → 文档 → 代码文件** 查询索引 |
 | [`docs/TESTING.md`](docs/TESTING.md) | **测试系统**：五层目录、命令、golden 归因规则、CI 三个 job、已知不稳定项与排错 |

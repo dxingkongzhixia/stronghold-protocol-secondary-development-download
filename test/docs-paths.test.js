@@ -16,13 +16,24 @@ import { PLAYER_MARKDOWN, rewritePlayerDoc, selectTracked, trackedFiles } from '
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** Each document with the least number of paths it names (a guard against an extraction that finds nothing). */
-const DOCS = [['docs/ARCHITECTURE.md', 100], ['CONTRIBUTING.md', 15]];
+const DOCS = [
+  ['docs/ARCHITECTURE.md', 100], ['CONTRIBUTING.md', 15],
+  ['docs/QUERY-INDEX.md', 60], ['docs/PROJECT-STATE.md', 40], ['docs/TESTING.md', 20],
+  ['docs/DEVELOPER.md', 20], ['docs/AI-AGENT.md', 20],
+];
 /** A repository path starts with one of these top-level directories … */
 const TOP = /^(?:server|shared|public|data|tools|test|docs|types|scripts|\.github)\//;
 /** … or is one of these root files (README.md is left out: a bare `README.md` often means a folder's own). */
 const ROOT_FILES = new Set(['package.json', 'eslint.config.js', 'jsconfig.json', 'CHANGELOG.md', 'CONTRIBUTING.md']);
 /** Git-ignored or made at install time. */
 const EXEMPT = ['public/assets/', 'public/vendor/', 'data/local-assets.json'];
+/** Gone on purpose and still named by decisions / history: never generated or deleted features. Explicit, not a pattern. */
+const REMOVED = new Set([
+  'data/builtin/faction-bolivar.json', // HELD_FACTIONS: the builder no longer emits it
+  'public/js/ui/hub/dynIllust.js',     // dynamic-skin experiment removed 2026-10-28
+  'public/js/ui/equipArea.js',         // equipment-area layer removed 2026-11-19
+  'docs/promo/',                       // promo sources are not in the repository
+]);
 
 /** Repository paths named in a Markdown text (inline code and fenced blocks), without duplicates. */
 function namedPaths(md) {
@@ -51,6 +62,7 @@ function fixedPart(path) {
 }
 
 function missing(path) {
+  if (REMOVED.has(path)) return null;
   if (EXEMPT.some((e) => path === e || path.startsWith(e) || `${path}/` === e)) return null;
   const { path: fixed, dir } = fixedPart(path);
   const abs = join(ROOT, fixed.replace(/\/$/, ''));

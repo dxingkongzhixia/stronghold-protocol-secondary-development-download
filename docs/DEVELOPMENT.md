@@ -15,7 +15,7 @@ restate the upstream design — it points at it:
 | [`docs/DEVELOPER.md`](DEVELOPER.md) | **the maintained human entry** (setup, architecture, workflows, tests, deploy, doc map) — read this first |
 | [`docs/AI-AGENT.md`](AI-AGENT.md) | the AI agent's expanded operating manual |
 | [`docs/RULES.md`](RULES.md) | the rules entry and authority order |
-| [`docs/HANDOVER.md`](HANDOVER.md) | the detailed handover / operations reference |
+| [`docs/HANDOVER.md`](HANDOVER.md) | archived (2026-10 snapshot); entry: [`DEVELOPER.md`](DEVELOPER.md) |
 | [`README.md`](../README.md) | what the game is, how to run it |
 | [`docs/DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md) | the same map in Chinese, plus recipes and a prioritized optimization list |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | the module overview and import boundaries |

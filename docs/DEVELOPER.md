@@ -131,7 +131,7 @@ SIM_E2E=1       # 模拟器端到端
 - 入口：`server/index.js`、`server/lobby.js`、`server/match/`。
 - 先搜 [`MATCHMAKING.md`](MATCHMAKING.md) 是否已有决策记录（§0–§49）。
 - 测试：`test/lobby.test.js`、`test/match/**`、`test/admin.test.js`。
-- 协议改动：`shared/protocol.js` + `test/protocol` / 相关 match 测试。
+- 协议改动：`shared/protocol.js` + `test/ui/protocol-boot.test.js` / 相关 match 测试。
 
 ### 5.2 战斗 / 技能 / 数值
 
@@ -188,7 +188,7 @@ node tools/plugin.mjs pack <id> --zip
 | 命令 | 用途 |
 |---|---|
 | `npm test` | 完整套件（必须用 `npm test`，不要裸 `node --test`） |
-| `node --test test/xxx.test.js` | 单文件 |
+| `node --test test/<name>.test.js` | 单文件 |
 | `node tools/build-data.mjs --offline` | 数据可重复构建 |
 | `node tools/kit-coverage.mjs --missing` | 每个 chess / skill 有 kit |
 | `node tools/golden.mjs` | 固定种子战斗 / 对局摘要 |
@@ -210,7 +210,7 @@ node tools/plugin.mjs pack <id> --zip
 ### 已知波动
 
 - `test/sim/robustness.test.js` 性能用例偶发超时；
-- `test/lobby-plugins` 偶发心跳超时。
+- `test/lobby-plugins.test.js` 偶发心跳超时。
 两者单独跑通常通过；不要为了绿而改断言。
 
 ---

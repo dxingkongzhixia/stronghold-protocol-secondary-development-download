@@ -1650,12 +1650,12 @@ S2C：`stats.records { scope: 'self' | 'other', owner: { name, role, guest }, re
 | 主题 | 在哪 |
 |---|---|
 | 批次本身（并了什么、怎么并、素材与部署注意） | [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) 的「官方战斗特效」一节（含**当日收尾提交表**）；决策点见该文件 §0 |
-| 运行时怎么工作 / 怎么调（fx-viewer、设置、per-machine 清单） | [`docs/HANDOVER.md`](HANDOVER.md) §6；[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1 |
+| 运行时怎么工作 / 怎么调（fx-viewer、设置、per-machine 清单） | [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md) §6（归档）；[`docs/DEVELOPMENT.md`](DEVELOPMENT.md) §9.1 |
 | 玩家可见的变化（官方特效、还原度修正、望 S3 跟子） | [`CHANGELOG.md`](../CHANGELOG.md) 0.4.0 的「新功能 / 规则」 |
 | 我们的增量（写在**上游文件里**、合并必须活过） | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) §2 的表（`LOOP_BUFF_BOUND` / `comeBack` / `strikePose` / `_predictWindUp` / fx-viewer 的模型与骨骼） |
 | 动画角色修正（澄闪起手、结城理 Die / 两段变身、按节奏起手） | 本文件 §48 |
 | 望的棋子（范围；跟子「每次至多 3 枚」；模拟侧结论） | 本文件 §30.5 / §30.6 / §48 ③ |
-| 本机清单的并集语义与踩坑 | [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」；[`docs/HANDOVER.md`](HANDOVER.md) §9 的陷阱表 |
+| 本机清单的并集语义与踩坑 | [`docs/ASSETS.md`](ASSETS.md)「The committed manifest and the served manifests」；[`HANDOVER-2026-10.md`](HANDOVER-2026-10.md) §9（归档） |
 
 **当天结论**：报障 ①②③ **全部结案**（③ 的本机模型疑点**证伪**——并集语义一直给到了官方石头；真问题是跟子数量，已按官方改）。**卡涅利安 / 空弦两条护盾观感**按 owner 决定**保持官方现状**，不再顺手修（[`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0.2 记录）。**均未推送 / 未上线**——只在本机 `master`，等 owner 发话。
 

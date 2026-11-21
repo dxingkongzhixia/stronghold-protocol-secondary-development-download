@@ -115,8 +115,8 @@ npm run start
 
 # 测试
 npm test                             # 完整套件（必须用 npm test，不要裸 node --test）
-node --test test/match/xxx.test.js   # 单文件
-node --test --test-name-pattern="..." test/xxx.test.js
+node --test test/match/<name>.test.js   # 单文件
+node --test --test-name-pattern="..." test/<name>.test.js
 
 # 数据 / 内容
 node tools/build-data.mjs --offline  # 必须让 data/ 逐字节不变
@@ -235,7 +235,7 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | 手机端 / 触屏 / 安全区 / 响应式 | `MOBILE-UI.md`（计划与验收）、`public/css/devices.css` 注释、`test/mobile/*`、`npm run check:mobile` |
 | 部署 / 环境变量 | `DEPLOY.md`、`PROJECT-STATE.md`、`AI-WORKFLOW.md` |
 | 当前版本 / 部署状态 | `PROJECT-STATE.md`、`CHANGELOG.md` |
-| 新文档 / 移动文档 | `docs/README.md` §2/§4 与 §7.3 的登记清单：`QUERY-INDEX.md`、根 `AGENTS.md` §3、`AI-AGENT.md` §7、`HANDOVER.md` 参考表 |
+| 新文档 / 移动文档 | `docs/README.md` §2/§4 与 §7.3 的登记清单：`QUERY-INDEX.md`、根 `AGENTS.md` §3、`AI-AGENT.md` §7、`HANDOVER-2026-10.md`（归档参考） |
 
 **权威顺序**：代码 + 测试 > 规范文档（`PLUGINS` / `DESIGN` / `SIM` / `META` / `DATA` / `PROTOCOL`）> 当前状态 > 历史 > 草案。历史文档不能覆盖当前行为。
 

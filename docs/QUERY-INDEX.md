@@ -143,7 +143,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 |---|---|
 | the wire contract (normative) | [`shared/protocol.js`](../shared/protocol.js), [`docs/design/network.md`](design/network.md) |
 | server HTTP/WS plumbing | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), `server/http/` |
-| server-side re-simulation / verification | `SP_VERIFY` (see [`docs/HANDOVER.md`](HANDOVER.md) §3) |
+| server-side re-simulation / verification | `SP_VERIFY` (see [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §6) |
 
 ## 8. Accounts, matchmaking and the community surface (fork-only)
 
@@ -166,7 +166,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | battlefield scenes (extracted official bundles, **committed** since 2026-10-14) | [`docs/ASSETS.md`](ASSETS.md) · [`docs/HANDOVER.md`](HANDOVER.md) §8 · [`docs/CONTENT-AUTHORING.md`](CONTENT-AUTHORING.md) §8.3 |
 | languages: UI strings, game texts, server messages, adding a language | [`docs/I18N.md`](I18N.md) |
 | content-pack format | [`docs/PACKS.md`](PACKS.md) |
-| local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/HANDOVER.md`](HANDOVER.md) §3 |
+| local-client extraction (official art/voice/Spine) | `tools/local-extract/`, [`docs/ASSETS.md`](ASSETS.md) |
 
 ## 9.1 Plugin development and operations
 
@@ -206,7 +206,7 @@ The decision record for all of this is [`docs/MATCHMAKING.md`](MATCHMAKING.md) �
 | plugin compatibility (this fork vs mainline 0.3.x) | `shared/plugins/manifest.js` (`appVersionCompatible`, `PLUGIN_COMPAT_APP`, `PLUGIN_COMPAT_CLASSES`), [`docs/PLUGIN-REVIEW.md`](PLUGIN-REVIEW.md) §7 |
 | plugin ordering / related bindings / import | `server/market.js` (`move`, `related`, `upload`), `/admin/api/market` `move` + `edit.related`, `/admin/api/market/import`, [`docs/PLUGIN-MARKET.md`](PLUGIN-MARKET.md) |
 | where the art origins are written down (the only place) | `public/asset-mirrors.json`, [`docs/ASSETS.md`](ASSETS.md) "sources", `public/js/assetMirror.js` |
-| where is the project / how do I take it over | [`docs/HANDOVER.md`](HANDOVER.md) §0, [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §2 |
+| where is the project / how do I take it over | [`docs/DEVELOPER.md`](DEVELOPER.md), [`docs/PROJECT-STATE.md`](PROJECT-STATE.md) §2 |
 | is there new upstream work, and what will it conflict with | `node tools/check-upstream.mjs` (`npm run check:upstream`), [`docs/UPSTREAM-MERGES.md`](UPSTREAM-MERGES.md) §0 |
 | which upstream work is still unmerged, why, and what to watch when porting it | [`docs/UPSTREAM-DEV-TRIAGE.md`](UPSTREAM-DEV-TRIAGE.md) |
 | how the official 规程 season is restored (scope, sources, phases, acceptance) | [`docs/UPSTREAM-REGULATION.md`](UPSTREAM-REGULATION.md) |
