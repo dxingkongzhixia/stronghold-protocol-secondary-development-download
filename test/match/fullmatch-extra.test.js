@@ -1,20 +1,12 @@
-// Full matches with the REAL simulation (server/sim/Battle.js) run to RESULT in virtual time with zero errors:
-// solo × every difficulty and co-op 2/3/4 (humans on "AI 托管" + AI teammates), 20 seeds each; invariants checked at
-// every phase change; every m.public / m.private frame JSON-safe. Plus boosted-LP runs that reach the Final Assault
-// with the real sim.
-// The co-op configurations live in fullmatch-coop*.test.js (separate files run in parallel).
+// test/match/fullmatch-extra.test.js — the full-match extras split out of fullmatch.test.js: boosted-LP runs that reach
+// the Final Assault, determinism, the server-run combat fallback and degraded data. Kept in their own file so the four
+// solo difficulties can run in parallel.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeMatch, checkInvariants } from './harness.js';
-import { SEEDS, runFull, reportSimIssues } from './fullmatchRun.js';
+import { runFull, reportSimIssues } from './fullmatchRun.js';
 
 after(reportSimIssues);
-
-for (const difficulty of ['FUNNY', 'NORMAL', 'HARD', 'ABYSS']) {
-  test(`solo ${difficulty}: ${SEEDS} seeds to RESULT with zero errors`, () => {
-    for (let seed = 1; seed <= SEEDS; seed++) runFull({ mode: 'solo', difficulty, humans: 1, bots: 0, seed });
-  });
-}
 
 test('boosted LP: the real sim reaches the Final Assault (solo FUNNY R9, co-op NORMAL R14) and ends cleanly', () => {
   for (const seed of [1, 2]) {

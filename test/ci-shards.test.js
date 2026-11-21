@@ -4,10 +4,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SHARD_COUNT, MAX_IMBALANCE, testFileList, loadTable, shardsOf, loadsOf, perFileMs, tableFrom } from '../tools/ci-shards.mjs';
+import { SHARD_COUNT, MAX_IMBALANCE, GOLDEN_LANE, testFileList, loadTable, shardsOf, loadsOf, perFileMs, tableFrom } from '../tools/ci-shards.mjs';
+
+/** The sharded suite: everything except the golden corpus lane (its own CI job and `npm run test:golden`). */
+const shardable = () => testFileList().filter((f) => !GOLDEN_LANE.includes(f));
 
 test('the shards partition the suite: every file once, none invented', () => {
-  const files = testFileList();
+  const all = testFileList();
+  for (const f of GOLDEN_LANE) assert.ok(all.includes(f), `golden lane file ${f} exists`);
+  const files = shardable();
   assert.ok(files.length > 500, `the suite has ${files.length} test files`);
   assert.ok(files.includes('test/e2e/coop.e2e.mjs'), 'the explicit e2e file is a file like the globs');
   assert.ok(files.every((f) => !f.includes('\\')), 'forward slashes');
@@ -20,7 +25,7 @@ test('the shards partition the suite: every file once, none invented', () => {
 });
 
 test('the split is deterministic: the same files and weights give the same shards', () => {
-  const files = testFileList();
+  const files = shardable();
   const table = loadTable();
   assert.deepEqual(shardsOf(files, table), shardsOf([...files].reverse(), table));
 });
@@ -29,13 +34,13 @@ test('the table is in date and the shards are balanced', () => {
   const table = loadTable();
   assert.equal(table.shards, SHARD_COUNT);
   assert.ok(table.defaultMs > 0);
-  const files = testFileList();
+  const files = shardable();
   const loads = loadsOf(shardsOf(files, table), table);
   const imbalance = Math.max(...loads) / Math.min(...loads);
   assert.ok(imbalance <= MAX_IMBALANCE,
     `shards drifted to ${imbalance.toFixed(2)}× — re-measure: node tools/ci-shards.mjs --write --timings <report.xml>`);
   // every measured file is a test file of this suite (a renamed or deleted file would inflate the table silently)
-  const known = new Set(files);
+  const known = new Set(testFileList());
   for (const f of Object.keys(table.measured)) assert.ok(known.has(f), `stale table entry ${f}`);
 });
 

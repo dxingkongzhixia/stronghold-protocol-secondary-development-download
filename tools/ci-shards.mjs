@@ -142,34 +142,41 @@ export function tableFrom(measured, files, defaultMs = 250) {
   return { shards: SHARD_COUNT, defaultMs, measured: known };
 }
 
+/** The golden corpus checks run in their own CI job (`npm run test:golden`), not in the four test shards. */
+export const GOLDEN_LANE = Object.freeze([
+  'test/golden.test.js', 'test/golden-versions.test.js', 'test/golden-diy.test.js', 'test/golden-standins.test.js',
+]);
+
 const isMain = import.meta.url === new URL(process.argv[1] ?? '', 'file://').href || process.argv[1]?.endsWith('ci-shards.mjs');
 if (isMain) {
   const argv = process.argv.slice(2);
   const opt = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
   const files = testFileList();
+  const shardFiles = files.filter((f) => !GOLDEN_LANE.includes(f));
   const tableOrNull = () => { try { return loadTable(); } catch { return null; } };
   if (argv.includes('--check')) {
     const table = loadTable();
-    const shards = shardsOf(files, table);
+    const shards = shardsOf(shardFiles, table);
     const loads = loadsOf(shards, table);
     const slow = Math.max(...loads), fast = Math.min(...loads);
     const imbalance = fast > 0 ? slow / fast : Infinity;
     loads.forEach((ms, i) => console.log(`shard ${i + 1}: ${shards[i].length} files, ${(ms / 1000).toFixed(1)} s`));
+    console.log(`golden lane: ${GOLDEN_LANE.length} files (npm run test:golden)`);
     console.log(`imbalance ${imbalance.toFixed(2)} (max ${MAX_IMBALANCE})`);
     if (imbalance > MAX_IMBALANCE) process.exit(1);
   } else if (opt('--print')) {
     const n = Number(opt('--print'));
-    const shards = shardsOf(files, loadTable());
+    const shards = shardsOf(shardFiles, loadTable());
     if (!(n >= 1 && n <= SHARD_COUNT)) { console.error(`--print: shard 1..${SHARD_COUNT}`); process.exit(2); }
     for (const f of shards[n - 1]) console.log(f);
   } else if (opt('--run')) {
     const n = Number(opt('--run'));
-    const shards = shardsOf(files, loadTable());
+    const shards = shardsOf(shardFiles, loadTable());
     if (!(n >= 1 && n <= SHARD_COUNT)) { console.error(`--run: shard 1..${SHARD_COUNT}`); process.exit(2); }
     const child = spawn(process.execPath, ['--test', '--test-concurrency=4', ...shards[n - 1]], { stdio: 'inherit', cwd: ROOT });
     child.on('exit', (code) => process.exit(code ?? 1));
   } else if (argv.includes('--list')) {
-    for (const [i, s] of shardsOf(files, loadTable()).entries()) console.log(`shard ${i + 1}: ${s.length} files`);
+    for (const [i, s] of shardsOf(shardFiles, loadTable()).entries()) console.log(`shard ${i + 1}: ${s.length} files`);
   } else if (argv.includes('--write')) {
     const timings = opt('--timings');
     if (!timings) { console.error('--write needs --timings <report.xml>'); process.exit(2); }

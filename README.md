@@ -97,7 +97,7 @@ node server/index.js   # 启动服务器：http://localhost:3000
 ### 测试
 
 ```bash
-npm test              # 完整套件（缺素材 / 浏览器的用例会自动跳过；数量见输出，不在文档里写死）
+npm test              # 完整套件（不含 golden 语料检查，后者用 npm run test:golden；缺素材 / 浏览器的用例会自动跳过）
 npm run golden        # 黄金结果：固定种子的整套战斗与人机对局摘要（改动玩法后按规则更新）
 ```
 

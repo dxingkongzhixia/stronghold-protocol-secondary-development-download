@@ -84,7 +84,7 @@ node server/index.js            # http://localhost:3000
 
 # verify — where .git + node_modules are (desktop: the STORE; laptop: this checkout)
 node tools/build-data.mjs --offline     # must leave data/ byte-for-byte unchanged
-npm test                                # full suite; use npm test, not bare node --test
+npm test                                # full suite except the golden corpus checks (npm run test:golden); never bare node --test
 npm run check:mobile                    # phone matrix audit (Chrome; docs/MOBILE-UI.md §7)
 node tools/kit-coverage.mjs --missing   # every chess has a kit
 node tools/i18n.mjs check en --strict   # English UI pack complete

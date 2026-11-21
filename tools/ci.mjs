@@ -62,6 +62,7 @@ export const STEPS = [
   { id: 'lint', ci: { job: 'tooling', name: 'Lint (warning budget 203)' }, npm: 'lint', describe: 'eslint . --max-warnings 203' },
   { id: 'imports', ci: { job: 'tooling', name: 'Import boundaries' }, npm: 'check:imports', describe: 'node tools/check-imports.mjs' },
   { id: 'typecheck', ci: { job: 'tooling', name: 'Typecheck' }, npm: 'typecheck', describe: 'tsc --noEmit --checkJs -p jsconfig.json' },
+  { id: 'golden-tests', ci: { job: 'golden', name: 'Golden — suite checks (digests + corpus integrity)' }, npm: 'test:golden', describe: 'node --test test/golden.test.js test/golden-versions.test.js test/golden-diy.test.js test/golden-standins.test.js' },
   { id: 'golden', ci: { job: 'golden', name: 'Golden — default data' }, npm: 'golden', describe: 'node tools/golden.mjs' },
   { id: 'golden-versions', ci: { job: 'golden', name: 'Golden — 规程 (act3autochess@V3_1)' }, describe: 'node tools/golden.mjs --version act3autochess@V3_1' },
   { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
@@ -336,6 +337,7 @@ function runStep(step, env) {
     case 'imports': return node(['tools/check-imports.mjs'], env);
     case 'typecheck': return node([binPath('typescript', 'tsc'), '--noEmit', '--checkJs', '-p', 'jsconfig.json'], env);
     case 'golden': return node(['tools/golden.mjs'], env);
+    case 'golden-tests': return node(['--test', 'test/golden.test.js', 'test/golden-versions.test.js', 'test/golden-diy.test.js', 'test/golden-standins.test.js'], env);
     case 'golden-versions': return node(['tools/golden.mjs', '--version', 'act3autochess@V3_1'], env);
     case 'mobile': return node(['tools/mobile-audit.mjs'], env);
     default: throw new Error(`no runner for step ${step.id}`);

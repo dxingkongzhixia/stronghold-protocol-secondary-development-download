@@ -39,7 +39,7 @@ npm run lint && npm run check:imports && npm run typecheck       # 代码检查�
 不包含 `npm ci`（依赖请自己装），也不跑 Node 版本 × 系统的矩阵。
 
 CI 里整套测试按 `ci-shards.json` 的实测耗时切成 4 片（`node tools/ci-shards.mjs --check` 看负载与失衡度，
-`--run <n>` 本地跑某一片；`--write --timings <JUnit 报告>` 重新配重）。本地 `npm test` / `npm run ci` 仍跑整套。
+`--run <n>` 本地跑某一片；`--write --timings <JUnit 报告>` 重新配重）。本地 `npm test` / `npm run ci` 跑整套（golden 语料在独立 job / `npm run test:golden`）。
 
 浏览器测试默认不跑，需要本机 Chrome（路径不标准时设置 `CHROME_PATH`），用环境变量打开：
 
@@ -120,7 +120,8 @@ SIM_E2E=1 node --test 'test/sim/*.browser.test.js'               # 浏览器里�
   `npm run ci` (or `node tools/ci.mjs`) runs the checks of `.github/workflows/ci.yml` in one go and stops at the first
   failure (`--keep-going`, `--only <steps>`, `--list`); it does not run `npm ci`. CI runs the suite as four shards
   (`ci-shards.json` holds their measured weights: `node tools/ci-shards.mjs --check | --run <n> | --write --timings
-  <report.xml>`); locally `npm test` and `npm run ci` still run the whole suite. Browser suites
+  <report.xml>`); locally `npm test` and `npm run ci` run the whole suite except the golden corpus checks
+(`npm run test:golden`, the separate CI golden job). Browser suites
   are opt-in: `SP_E2E=1`, `SP_REAL_E2E=1` (needs downloaded art), `RENDER_E2E=1`, `SIM_E2E=1` (a local Chrome,
   `CHROME_PATH`). A refactor never changes `test/golden/*.json`; an intended gameplay change runs
   `npm run golden:update` and commits the digests with the change, naming the scenarios that moved.

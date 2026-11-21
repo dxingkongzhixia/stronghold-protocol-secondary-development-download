@@ -9,11 +9,15 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// `npm test` skips the corpus checks (tools/run-tests.mjs sets SP_SKIP_GOLDEN=1); `npm run test:golden` and the
+// CI golden job run them.
+const SKIP = process.env.SP_SKIP_GOLDEN === '1';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = path.join(ROOT, 'test', 'golden', 'act3autochess-v3_1');
 const FAMILIES = ['roster', 'bonds', 'fields', 'matches', 'standins', 'diy'];
 
-test('the regulation corpus has its six golden files, self-labelled and free of engine errors', () => {
+test('the regulation corpus has its six golden files, self-labelled and free of engine errors', { skip: SKIP }, () => {
   for (const f of FAMILIES) {
     const doc = JSON.parse(readFileSync(path.join(DIR, `${f}.json`), 'utf8'));
     assert.equal(doc.family, f);
@@ -27,7 +31,7 @@ test('the regulation corpus has its six golden files, self-labelled and free of 
   }
 });
 
-test('the regulation roster carries the map matrix (every normal stage × 4 modes)', () => {
+test('the regulation roster carries the map matrix (every normal stage × 4 modes)', { skip: SKIP }, () => {
   const doc = JSON.parse(readFileSync(path.join(DIR, 'roster.json'), 'utf8'));
   const stages = JSON.parse(readFileSync(path.join(ROOT, 'data', 'versions', 'act3autochess-v3_1', 'stages.json'), 'utf8'));
   const normal = Object.values(stages).filter((s) => s.kind !== 'unite').length;
@@ -39,7 +43,7 @@ test('the regulation roster carries the map matrix (every normal stage × 4 mode
   }
 });
 
-test('the regulation corpus recomputes to its stored digests (fast subset)', () => {
+test('the regulation corpus recomputes to its stored digests (fast subset)', { skip: SKIP }, () => {
   const r = spawnSync(process.execPath,
     ['tools/golden.mjs', '--version', 'act3autochess@V3_1', '--fast', '--jobs', '4'],
     { cwd: ROOT, encoding: 'utf8', timeout: 15 * 60_000 });

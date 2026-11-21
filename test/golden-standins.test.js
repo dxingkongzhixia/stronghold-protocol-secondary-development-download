@@ -7,6 +7,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+// `npm test` skips the corpus checks (tools/run-tests.mjs sets SP_SKIP_GOLDEN=1); `npm run test:golden` and the
+// CI golden job run them.
+const SKIP = process.env.SP_SKIP_GOLDEN === '1';
+
 const read = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const CHESS = read('../data/chess.json');
 const BACKUPS = read('../data/backups.json');
@@ -16,7 +20,7 @@ const COL = Object.fromEntries(STANDINS.columns.units.map((k, i) => [k, i]));
 
 const normal = Object.values(CHESS).filter((c) => c.chessType === 'NORMAL' && c.backup && c.backup.charId && c.backup.charId !== c.charId); // our CUSTOM_CHESS have no stand-in prototype
 
-test('standins: every NORMAL chess record (normal + elite) is fielded once, with its backup skill, without content errors', () => {
+test('standins: every NORMAL chess record (normal + elite) is fielded once, with its backup skill, without content errors', { skip: SKIP }, () => {
   assert.equal(normal.length, 110);
   const seen = new Map();
   for (const [id, sc] of Object.entries(STANDINS.scenarios)) {
@@ -32,7 +36,7 @@ test('standins: every NORMAL chess record (normal + elite) is fielded once, with
   assert.equal(new Set(normal.map((c) => c.backup.charId)).size, 17, 'all 17 stand-ins');
 });
 
-test('standins: every active skill a chess names for its stand-in is cast; passive ones deploy', () => {
+test('standins: every active skill a chess names for its stand-in is cast; passive ones deploy', { skip: SKIP }, () => {
   const cast = new Map();
   for (const sc of Object.values(STANDINS.scenarios)) {
     for (const u of sc.units) {
@@ -51,7 +55,7 @@ test('standins: every active skill a chess names for its stand-in is cast; passi
   }
 });
 
-test('matches: the 补位 match\'s human seat fields stand-ins (listed per round) and the match ends without errors', () => {
+test('matches: the 补位 match\'s human seat fields stand-ins (listed per round) and the match ends without errors', { skip: SKIP }, () => {
   // The stand-in coverage lives in the `-coverage-standins` scenario: the 满信赖 data rebuild (2026-10-15, MATCHMAKING
   // §46) shifted the shop / deployment stream, so the original seed 14 (kept for its own recorded outcome) fields none.
   // 2026-10-25: the built-in faction boost plugins (00cb38d02) moved that stream again — seed 26 fields none either, so

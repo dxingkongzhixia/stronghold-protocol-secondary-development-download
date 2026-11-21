@@ -6,12 +6,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
+// `npm test` skips the corpus checks (tools/run-tests.mjs sets SP_SKIP_GOLDEN=1); `npm run test:golden` and the
+// CI golden job run them.
+const SKIP = process.env.SP_SKIP_GOLDEN === '1';
+
 const read = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const MATCHES = read('./golden/matches.json');
 const BACKUPS = read('../data/backups.json');
 const ECONOMY = read('../data/config.json').economy;
 
-test('matches: the 自选 match\'s human seat draws its 自选 pieces in its shop and fields 推进之王 in battle', () => {
+test('matches: the 自选 match\'s human seat draws its 自选 pieces in its shop and fields 推进之王 in battle', { skip: SKIP }, () => {
   const [id, dg] = Object.entries(MATCHES.scenarios).find(([k]) => /-diy$/.test(k)) || [];
   assert.ok(dg, 'scenario present');
   assert.deepEqual(dg.errors, { engine: 0, logged: 0, sim: 0, dispatcher: 0 }, id);

@@ -137,6 +137,9 @@ jobs:
       - name: Install (npm ci → postinstall copies public/vendor)
         run: npm ci --no-audit --no-fund
 
+      - name: Golden — suite checks (digests + corpus integrity)
+        run: npm run test:golden
+
       - name: Golden — default data
         run: npm run golden
 

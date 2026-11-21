@@ -22,7 +22,8 @@
 
 | 目的 | 命令 |
 |---|---|
-| 全量（推荐；并发固定 4） | `npm test`（五个 full-match 套件本地默认 **6 seeds**；CI / 发布前用 `MATCH_SEEDS=20 npm test` 跑满 20） |
+| 全量（推荐；并发固定 4） | `npm test`（**不含 golden 语料检查**；它们由 `npm run test:golden` 与 CI 的 golden job 负责；五个 full-match 套件本地默认 **6 seeds**，CI / 发布前用 `MATCH_SEEDS=20 npm test` 跑满 20） |
+| golden 套件检查（本地） | `npm run test:golden`（default + 规程语料重算、六文件完整性） |
 | **快速档（本地循环，≤2 分钟）** | `npm run test:fast`（`tools/test-fast.mjs` + `test/fast.list`：文档、i18n、经济、版本数据、golden fast 子集） |
 | **单个 CI 分片（本地复现）** | `npm run test:shard -- 2`（1..4，与 CI 同一张权重表 `ci-shards.json`） |
 | 某个套件 | `node --test test/match/bot.test.js` |
@@ -82,8 +83,8 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 
 | job | 跑什么 | 说明 |
 |---|---|---|
-| `test`（ubuntu + windows × node 22 / 24） | `node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"`（按 `ci-shards.json` 分 4 片）+ 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`、**`MATCH_SEEDS=20`**（本地默认 6）；`npm test` 的 golden 只是 **fast 子集** |
-| `golden` | `npm run golden` + `node tools/golden.mjs --version act3autochess@V3_1` | **完整语料**（默认 + 规程）；漏重算 golden 会在这里红，而不是等到手动跑 |
+| `test`（ubuntu + windows × node 22 / 24） | `node tools/ci-shards.mjs --run ${{ matrix.shard }}`（按 `ci-shards.json` 分 4 片；**不含 golden 语料**）+ 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`、**`MATCH_SEEDS=20`**（本地默认 6）；golden 语料检查在 `golden` job |
+| `golden` | `npm run test:golden` + `npm run golden` + `node tools/golden.mjs --version act3autochess@V3_1` | **完整语料**（默认 + 规程）+ 套件的 golden 检查（默认/规程重算、完整性）；漏重算会在这里红 |
 | `tooling` | `eslint`（warning 预算 200）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线守卫 + 文档/打包门禁 | node 24 的轻量通道 |
 | `mobile-audit` | `npm run check:mobile`（640×360 … 1024×768） | 截图作 artifact；破坏布局会红 |

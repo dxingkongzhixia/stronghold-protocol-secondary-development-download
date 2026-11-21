@@ -63,7 +63,7 @@ node server/index.js   # http://localhost:3000
 ```bash
 node tools/doctor.mjs                 # 环境诊断
 node tools/build-data.mjs --offline   # 应让 data/ 逐字节不变
-npm test                              # 完整测试（首次可能较久）
+npm test                              # 完整测试（不含 golden 语料；golden 用 npm run test:golden）
 ```
 
 浏览器 / E2E 默认关闭，按需开启：
@@ -187,7 +187,7 @@ node tools/plugin.mjs pack <id> --zip
 
 | 命令 | 用途 |
 |---|---|
-| `npm test` | 完整套件（必须用 `npm test`，不要裸 `node --test`） |
+| `npm test` | 完整套件（不含 golden 语料；golden 用 `npm run test:golden`；必须用 `npm test`，不要裸 `node --test`） |
 | `node --test test/<name>.test.js` | 单文件 |
 | `node tools/build-data.mjs --offline` | 数据可重复构建 |
 | `node tools/kit-coverage.mjs --missing` | 每个 chess / skill 有 kit |

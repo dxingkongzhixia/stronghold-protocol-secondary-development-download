@@ -9,16 +9,21 @@ import assert from 'node:assert/strict';
 import { availableParallelism } from 'node:os';
 import { FAMILY_NAMES, scenariosOf, computeDigests, loadGolden, storedDigests, compareFamily, formatDiffs } from '../tools/golden.mjs';
 
+// `npm test` skips the corpus checks (tools/run-tests.mjs sets SP_SKIP_GOLDEN=1); `npm run test:golden` and the
+// CI golden job run them.
+const SKIP = process.env.SP_SKIP_GOLDEN === '1';
+
 const FULL = process.env.GOLDEN_FULL === '1';
 const JOBS = Math.max(1, Number(process.env.GOLDEN_JOBS) || Math.min(4, Math.max(1, availableParallelism() - 1)));
 
 let digests = null;
 // ≈ 7 s (fast) / 20 s (full) with 4 worker threads here; the timeout only stops a hang (a step that never returns)
 before(async () => {
+  if (SKIP) return;
   digests = await computeDigests(FAMILY_NAMES, { select: (sc) => FULL || sc.fast, jobs: JOBS });
 }, { timeout: 15 * 60_000 });
 
-test('a changed digest value is reported with its scenario, field and old → new', () => {
+test('a changed digest value is reported with its scenario, field and old → new', { skip: SKIP }, () => {
   const stored = storedDigests(loadGolden('roster'));
   const [id, dg] = Object.entries(stored)[0];
   const changed = structuredClone(dg);
@@ -35,7 +40,7 @@ test('a changed digest value is reported with its scenario, field and old → ne
   assert.match(text, /\.enemies\.enemy_\w+\.killed: \d+ → \d+/);
 });
 
-test('golden files list exactly the corpus scenarios (regenerate with npm run golden:update after a corpus change)', () => {
+test('golden files list exactly the corpus scenarios (regenerate with npm run golden:update after a corpus change)', { skip: SKIP }, () => {
   for (const f of FAMILY_NAMES) {
     const doc = loadGolden(f);
     assert.ok(doc, `test/golden/${f}.json is missing: run npm run golden:update`);
@@ -46,7 +51,7 @@ test('golden files list exactly the corpus scenarios (regenerate with npm run go
 
 // a stored digest that records engine errors means the corpus was regenerated over a crash (0.2.0: a merge dropped an
 // import a kit's tick handler used, and `npm run golden:update` stored 9288 swallowed errors as "the expected result")
-test('no stored scenario records engine errors (errors.count is 0 everywhere)', () => {
+test('no stored scenario records engine errors (errors.count is 0 everywhere)', { skip: SKIP }, () => {
   for (const f of FAMILY_NAMES) {
     for (const [id, dg] of Object.entries(storedDigests(loadGolden(f)))) {
       if (!dg || typeof dg !== 'object' || !dg.errors) continue;
@@ -59,7 +64,7 @@ test('no stored scenario records engine errors (errors.count is 0 everywhere)', 
 });
 
 for (const f of FAMILY_NAMES) {
-  test(`golden ${f}: ${FULL ? 'every scenario' : 'the fast subset (GOLDEN_FULL=1 for all)'} reproduces its stored digest`, () => {
+  test(`golden ${f}: ${FULL ? 'every scenario' : 'the fast subset (GOLDEN_FULL=1 for all)'} reproduces its stored digest`, { skip: SKIP }, () => {
     const computed = digests[f];
     assert.ok(Object.keys(computed).length > 0, `no ${f} scenario computed`);
     const diffs = compareFamily(storedDigests(loadGolden(f)), computed);
