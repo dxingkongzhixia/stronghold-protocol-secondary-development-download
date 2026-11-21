@@ -22,13 +22,14 @@
 
 | 目的 | 命令 |
 |---|---|
-| 全量（推荐；并发固定 4） | `npm test` |
+| 全量（推荐；并发固定 4） | `npm test`（五个 full-match 套件本地默认 **6 seeds**；CI / 发布前用 `MATCH_SEEDS=20 npm test` 跑满 20） |
 | **快速档（本地循环，≤2 分钟）** | `npm run test:fast`（`tools/test-fast.mjs` + `test/fast.list`：文档、i18n、经济、版本数据、golden fast 子集） |
 | **单个 CI 分片（本地复现）** | `npm run test:shard -- 2`（1..4，与 CI 同一张权重表 `ci-shards.json`） |
 | 某个套件 | `node --test test/match/bot.test.js` |
 | 某个领域 | `node --test --test-concurrency=2 test/plugins/*.test.js` |
 | 单条用例 | `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden 校验 / 重算 | `node tools/golden.mjs` / `node tools/golden.mjs --update`（先归因，见 §4） |
+| golden 归因 | `npm run golden:attrib -- --paths server/sim`（自动：存下重算 diff → 只回退你的改动 → 基线必须匹配 → 恢复 → 必须失配） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js` |
 | 手机矩阵 | `npm run check:mobile`（`tools/mobile-audit.mjs`；需 Chrome，`CHROME_PATH` 可配） |
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
@@ -65,6 +66,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 3. 禁止手改 golden 输出；禁止为了让套件变绿而放宽断言或跳过用例。
 4. 纯显示层的事件计数（例如 `#729` 的 `events.rate`）也算移动，同样要归因。
 5. 上游/历史语料在 `test/golden/<version>/`（版本系统），我们只有默认一套。
+6. 归因可以自动做：`npm run golden:attrib -- --paths server/sim`（重算后运行；它保存 golden diff → 只回退你的路径 → 基线必须匹配 → 恢复 → 必须失配）。
 
 ## 5. 已知不稳定（不要误判为回归）
 
@@ -80,7 +82,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 
 | job | 跑什么 | 说明 |
 |---|---|---|
-| `test`（ubuntu + windows × node 22 / 24） | `node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"`（按 `ci-shards.json` 分 4 片）+ 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`（无 Chrome / 无素材）；`npm test` 的 golden 只是 **fast 子集** |
+| `test`（ubuntu + windows × node 22 / 24） | `node --test --test-concurrency=4 "test/**/*.test.js" "test/e2e/coop.e2e.mjs" "plugins/_template/**/*.test.js"`（按 `ci-shards.json` 分 4 片）+ 服务器冒烟（boot / `/healthz` / 首页 / doctor） | 显式 `CI=1`、`SP_E2E=0`、`RENDER_E2E=0`、**`MATCH_SEEDS=20`**（本地默认 6）；`npm test` 的 golden 只是 **fast 子集** |
 | `golden` | `npm run golden` + `node tools/golden.mjs --version act3autochess@V3_1` | **完整语料**（默认 + 规程）；漏重算 golden 会在这里红，而不是等到手动跑 |
 | `tooling` | `eslint`（warning 预算 200）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线守卫 + 文档/打包门禁 | node 24 的轻量通道 |

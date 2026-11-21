@@ -34,6 +34,8 @@ jobs:
       SP_E2E: '0'
       SP_REAL_E2E: '0'
       RENDER_E2E: '0'
+      # The full-match suites default to 6 seeds locally; CI keeps the full 20.
+      MATCH_SEEDS: '20'
       NO_COLOR: '1'
     steps:
       - uses: actions/checkout@v7

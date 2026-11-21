@@ -8,7 +8,9 @@ import assert from 'node:assert/strict';
 import { PHASE } from '../../shared/constants.js';
 import { makeMatch, checkInvariants } from './harness.js';
 
-export const SEEDS = Number(process.env.MATCH_SEEDS || 20);
+// Local default: 6 seeds (the five full-match suites dominated the suite's serial time; 6 keeps the integration
+// smoke meaningful). CI and release checks run the full 20 with `MATCH_SEEDS=20` (ci.yml's test job sets it).
+export const SEEDS = Number(process.env.MATCH_SEEDS || 6);
 export const simIssues = new Set();
 
 export function reportSimIssues() {
