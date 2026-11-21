@@ -311,7 +311,7 @@
   "test/match/boss-ai-grace.test.js": 23,
   "test/match/boss-hp-scaling.test.js": 279,
   "test/match/bosshit-ticker.test.js": 288,
-  "test/match/bosshp.test.js": 107045,
+  "test/match/bosshp.test.js": 29014,
   "test/match/bot-emotes.test.js": 68,
   "test/match/bot-prior.test.js": 8,
   "test/match/bot-smarter.test.js": 22239,

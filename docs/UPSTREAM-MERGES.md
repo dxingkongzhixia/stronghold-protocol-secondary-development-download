@@ -1689,6 +1689,7 @@ A4 → `roster` / `bonds` / `fields` 各若干（`a115c672c`）；A5 → `roster
 
 **golden 归因**：只回退 `server/match/bot.js` 的这批改动 → 存档零差异（已验证）；实际变化 = `matches.json`
 14 个场景（`29cd7327e`）。`test/match/bosshp.test.js` 的「双方都开奥术」种子表因此顺延到加 6（商店随机流被终局刷新移动）。
+（2026-11-21：该种子表已去掉——这条用例改为直接构造双人 boss field 的前置条件，见 `bosshp.test.js` 的注释。）
 
 **未做**：B2 的 `band-strength` 一张表是上游 bot 的 80 局实测，我们的 bot 已分叉，照抄无意义；它只服务 B3（终极按
 bot 强度给乐队加权）。**owner 2026-11-04 决定 B3 暂时不合**，等以后用自己的 bot 重新实测再议。

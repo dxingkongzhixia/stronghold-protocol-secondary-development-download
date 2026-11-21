@@ -6,12 +6,14 @@
 //     player alive when the fight starts (DESIGN §25.13.4: the owner's decision of 2026-10-06, adopting PR #209).
 //   * Damage: the 卫戍 systems' "+X%" attribute bonuses are 直接乘算 — summed, not compounded (PRTS 盟约记录 / 游戏数据基础);
 //     v2.5 compounded them, which made stacked lineups kill the leaders 1.2–3× faster (more with more layers).
-// Real bot matches to the Final Assault (real sim, server-run fields): every operator fighting the leader carries its
-// bond / strategy / equipment bonuses in the additive bucket, both fields drain the one pool exactly once per hit.
+// Real sim to the Final Assault: real bot matches (server-run fields) for the pool and the 碎铳之簧 link, and one
+// constructed pair field built from bossRounds' own inputs (two players, one wave, one pool) for the 奥术 rule — every
+// operator fighting the leader carries its bond / strategy / equipment bonuses in the additive bucket, both fields drain
+// the one pool exactly once per hit.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PHASE } from '../../shared/constants.js';
-import { makeMatch, DATA as DATA_RAW } from './harness.js';
+import { PHASE, GEO } from '../../shared/constants.js';
+import { makeMatch, give, legalTileFor, chessOfTier, DATA as DATA_RAW } from './harness.js';
 import { withoutTuning } from '../../tools/balance.mjs';
 // The official leader pools: data/tuning.json (OUR boost layer, BALANCE §8) is left out — test/match/boost.test.js has it.
 const DATA = withoutTuning(DATA_RAW);
@@ -19,7 +21,8 @@ import { aggregateMods } from '../../server/sim/buffs.js';
 import { bondBb } from '../../server/sim/content/bonds/addon/battle.js';
 import { DataSource } from '../../server/sim/simdata.js';
 import { createBattleFromSpec } from '../../server/sim/spec.js';
-import { SharedBossPool } from '../../server/match/finalAssault.js';
+import { bossPoolHp, SharedBossPool } from '../../server/match/finalAssault.js';
+import { buildBossWave } from '../../server/match/waves.js';
 
 /** 4 AI seats, co-op, LP 400 (they reach R14), +`layers` on every active bond at the boss round's prep. */
 function toFinalAssault({ difficulty, seed, bossId, layers = 0 }) {
@@ -121,42 +124,69 @@ test('绝境 Final Assault: both pair fields drain the one pool, every hit exact
   m.dispose();
 });
 
-test('终极 Final Assault vs 假想敌：胄 (seeded bot match): both players\' 奥术 never multiply on the leader; a drone costs it 2 % of the pool', () => {
+test('终极 Final Assault vs 假想敌：胄 (a constructed two-player pair field): both players\' 奥术 never multiply on the leader; a drone costs it 2 % of the pool', () => {
   // DESIGN §20.10: one 奥术 instance per target (the strongest — PRTS 作战机制 同名buff, 巴哈姆特 12316 "共享型buff會跟對面搶");
-  // 死亡集群's "最大生命值2%" = the leader's shown max HP, the pool (DRONE_LINK_BASE 'pool' [ASSUMED]): 288 000 at 终极
-  // with 4 alive (14 400 000)
-  // the bots' boards follow every draw of the match (the elite-to-board merge, DESIGN §20.11, moved seed 7 to 12; the
-  // 战术决策 drawn with replacement moved 12 on; the Final Assault item hunt of 2026-11-04 moved the boss-prep shop draws
-  // on again, which is why 6 joins the list): the first of these seeds whose bots pair two 奥术 players
-  const pairOf = (m) => m.fields.filter((f) => f.battle).find((f) => f.players.length === 2 && f.players.every((pid) => f.battle.getPlayer(pid).bonds.arcaneShip?.active));
-  let h = null;
-  for (const seed of [13, 7, 11, 21, 23, 6]) {
-    h = toFinalAssault({ difficulty: 'ABYSS', seed, bossId: 'boss_1' });
-    if (pairOf(h.m)) break;
-    h.m.dispose();
-    h = null;
-  }
-  assert.ok(h, 'precondition: a pair field where both players run 奥术 (bot lineups of one of the seeds)');
+  // 死亡集群's "最大生命值2%" = the leader's shown max HP, the pool (DRONE_LINK_BASE 'pool' [ASSUMED]): 144 000 at 终极
+  // with 2 alive (7 200 000)
+  //
+  // The field is built the way server/match/match/bossRounds.js builds one — the round's boss wave, two players'
+  // battleInput (LEFT/RIGHT), one SharedBossPool(bossPoolHp = bloodPoint × alive) — instead of hunting bot seeds for two
+  // players who happen to run 奥术: that hunt ran five full matches (≈ 100 s) and moved with every draw change (the old
+  // list grew 7 → 12 → [13, 7, 11, 21, 23, 6]). Here each board carries the two members tier 1 needs at different layer
+  // counts, so each player applies its own instance — the case v2.5 multiplied.
+  const h = makeMatch({ data: DATA, mode: 'coop', difficulty: 'ABYSS', humans: 2, seed: 1, captureFrames: false }).start();
+  h.toPrep(1);
   const m = h.m;
-  const fields = m.fields.filter((f) => f.battle);
+  const members = DATA.bonds.arcaneShip.members;
+  const baseOf = (id) => String(id).replace(/_[ab]$/, '');
+  const memberBases = new Set(members.map(baseOf));
+  // strong non-奥术 fillers: the drones must be shot down for the link check
+  const fillers = chessOfTier(5).filter((id) => !memberBases.has(baseOf(id)));
+  const players = [h.ps('p_0'), h.ps('p_1')];
+  for (const [ps, layers] of [[players[0], 0], [players[1], 100]]) {
+    ps.lp = 9999;
+    for (const p of [...ps.board.values()]) if (p.kind === 'chess') ps.returnCopies(p);
+    ps.board.clear();
+    for (const id of [...members.slice(0, 2), ...fillers]) {
+      const at = legalTileFor(m, ps, id);
+      if (!at) continue;
+      give(m, ps, id, 'board', at);
+    }
+    ps.layers.arcaneShip = layers;
+    ps.recompute();
+    assert.equal(ps.bonds.arcaneShip.count, 2, 'two 奥术 members on the board (tier 1)');
+  }
+  const round = m.gd.bossRound;
+  const wave = buildBossWave(m.gd, m.rngWaves, m.factions, round, { bossId: 'boss_1', solo: false });
+  const pool = new SharedBossPool(bossPoolHp(m.gd, 'boss_1', 2));
+  const lp = players.reduce((s, p) => s + p.lp, 0);
+  const b = m.newBattle({
+    seed: 1, kind: 'boss', modeId: m.modeId, round, stageId: m.stageId,
+    rect: { ...GEO.BOSS_RECT }, timeLimit: Infinity,
+    players: players.map((ps, j) => {
+      const input = ps.battleInput({ side: j === 0 ? 'L' : 'R', colOffset: j === 0 ? 0 : 8 });
+      input.lpForBoss = lp;
+      return input;
+    }),
+    spawns: wave.spawns.map((s) => ({ ...s, mods: s.mods ? { ...s.mods } : undefined })),
+    routes: wave.routes, sharedBoss: pool,
+    flags: { layerGainsEnabled: false, ...m.gd.dp, enemyScale: m.gd.bossEnemyScale(round), timeScale: m.gd.combatTimeScale },
+    fieldId: 'b1', enemyOverrides: wave.overrides, waveId: wave.templateId, bossId: 'boss_1',
+  });
   const bb = bondBb('arcaneShip');
-  const both = pairOf(m);
   const allowed = [];
-  for (const pid of both.players) {
-    const b = both.battle.getPlayer(pid).bonds.arcaneShip;
-    const v = bb.base_damage_scale + bb.damage_scale_per_stack * b.layers;
+  for (const pid of players.map((p) => p.playerId)) {
+    const v = bb.base_damage_scale + bb.damage_scale_per_stack * b.getPlayer(pid).bonds.arcaneShip.layers;
     allowed.push(v, v * bb.power_weak_scale);
   }
   const links = [];
-  for (const f of fields) {
-    f.battle.on('damaged', (c) => {
-      if (c.target && c.target.bossPool && c.type === 'true' && c.dmg && !c.dmg.origin && c.dmg.tags && c.dmg.tags.includes('hpLoss')) links.push(c.amount);
-    }, { priority: -1e9 });
-  }
+  b.on('damaged', (c) => {
+    if (c.target && c.target.bossPool && c.type === 'true' && c.dmg && !c.dmg.origin && c.dmg.tags && c.dmg.tags.includes('hpLoss')) links.push(c.amount);
+  }, { priority: -1e9 });
   let withArcane = 0;
-  for (let i = 0; i < 1200; i++) { // 40 game s
-    for (const f of fields) if (!f.battle.finished) f.battle.step();
-    for (const e of both.battle.enemies) {
+  for (let i = 0; i < 6000 && !b.finished; i++) { // up to 200 game s; the drones need time to be shot down
+    b.step();
+    for (const e of b.enemies) {
       if (!e.alive || !e.isBoss) continue;
       const arc = e.buffs.filter((x) => String(x.key).startsWith('bond:arcaneShip'));
       assert.ok(arc.length <= 1, `one 奥术 instance on the leader (${arc.map((x) => x.key)})`);
@@ -168,8 +198,8 @@ test('终极 Final Assault vs 假想敌：胄 (seeded bot match): both players\'
   }
   assert.ok(withArcane > 100, `the leader carried 奥术 (${withArcane} samples)`);
   assert.ok(links.length >= 1, 'drones were shot down');
-  for (const x of links) assert.equal(x, m.bossPool.maxHp * 0.02, 'drone link = 2 % × the pool');
-  assert.equal(m.bossPool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 4, 'the 14 400 000 pool of 4 alive players');
+  for (const x of links) assert.equal(x, pool.maxHp * 0.02, 'drone link = 2 % × the pool');
+  assert.equal(pool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 2, 'the 7 200 000 pool of 2 alive players');
   m.dispose();
 });
 
