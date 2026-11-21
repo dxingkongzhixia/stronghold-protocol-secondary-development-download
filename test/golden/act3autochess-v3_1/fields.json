@@ -831,7 +831,7 @@
         "enemy_9020_actrpc": [1,1,0,10340,603235]
       },
       "hooks": [1,39,3859,1315,1315,4005,6796,14663,32,41,56,51,107,23404,644,25,29,0,1,75,0,25,7],
-      "events": {"atk":1693,"cast":9,"deploy":33,"die":41,"dmg":6237,"engage":13,"fx":2097,"heal":279,"rate":196,"skill":107,"spawn":62,"status":1217},
+      "events": {"atk":1693,"cast":9,"deploy":33,"die":41,"dmg":6237,"engage":13,"fx":2097,"heal":279,"rate":196,"skill":107,"spawn":62,"status":1224},
       "fx": {
         "aoe": 148,
         "bandage": 10,
