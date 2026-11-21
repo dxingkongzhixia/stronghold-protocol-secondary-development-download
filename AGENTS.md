@@ -1,5 +1,7 @@
 # AGENTS.md — entry point for an AI agent working in this repository
 
+<!-- doc: role=entry status=current -->
+
 This is the machine-readable entry point (OpenCode reads it automatically). It is a **map, not a duplicate**:
 the hard rules are here; the detailed operating manual is [`docs/AI-AGENT.md`](docs/AI-AGENT.md).
 Human-oriented entry: [`docs/DEVELOPER.md`](docs/DEVELOPER.md). Current state: [`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md).

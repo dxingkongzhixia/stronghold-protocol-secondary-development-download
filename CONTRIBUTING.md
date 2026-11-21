@@ -1,5 +1,7 @@
 # 参与贡献
 
+<!-- doc: role=guide status=current -->
+
 欢迎提 Issue 和 Pull Request：bug、和官方规则不一致的地方、新干员的战斗逻辑、翻译、文档都可以。动手之前先看一眼
 [docs/DEVELOPER.md](docs/DEVELOPER.md)（开发入口）和 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（代码地图：哪个规则在哪个文件）。English summary at the end.
 
