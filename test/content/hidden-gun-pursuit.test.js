@@ -152,6 +152,26 @@ test('隐秘核心铳: the chase holds for the whole 5 s gain, then the dash and
   assert.equal(h.b.errorCount, 0);
 });
 
+test('碎铳之簧: a regenerated frequency shield silences it for regenerate_duration (PRTS 9019 / 9020)', () => {
+  const h = arena({ solo: true, manual: true });
+  h.step();
+  const spring = h.spawn(SPRING, { pos: [3, 1], tag: 'part' });
+  h.step();
+  const wall = h.allies()[0];
+  assert.ok(spring.findBuff('boss:springShield'), 'shielded on spawn');
+  for (let i = 0; i < 20 && spring.findBuff('boss:springShield'); i++) {
+    h.b.dealDamage(wall, spring, { amount: 1, type: 'phys', isAttack: true });
+  }
+  assert.ok(!spring.findBuff('boss:springShield'), 'the frequency shield broke');
+  const regen = spring.findBuff('boss:springRegen');
+  assert.ok(regen, 'the regenerate buff is on');
+  assert.equal(spring.s.flags.silence, true, 'silenced while it regenerates');
+  const left = Number.isFinite(regen.timeLeft) ? regen.timeLeft : 30;
+  assert.ok(h.runUntil(() => !spring.findBuff('boss:springRegen'), Math.min(60, left + 1)), 'the silence ends with the regeneration');
+  assert.ok(!spring.s.flags.silence);
+  assert.equal(h.b.errorCount, 0);
+});
+
 test('隐秘核心铳: solo keeps the template initial cooldown and repeated call timing', () => {
   const h = arena({ solo: true });
   const calls = recordCalls(h);

@@ -175,9 +175,9 @@ export class PlayerPlacement {
 
   /**
    * Range-bound summons left outside their owner's attack range (the owner re-oriented in place, promoted, its loadout
-   * changed, moved with no room to take its summons back) go back onto their stack — a summon still inside stays
-   * [ASSUMED: the official moves every summon of a MOVED owner back, PRTS 卫戍协议/帮助 "移动干员时，其所属召唤物全部退场
-   * 并重置至手牌区"; an in-place re-orientation keeps the ones it can]. A passive lift (`allowTemp`) with no stack
+   * changed or moved) go back onto their stack — a summon still on a legal tile stays, preserving its facing and
+   * identity (2026-11-12 owner-reported official QoL; the old PRTS help still describes recalling all of them).
+   * A passive lift (`allowTemp`) with no stack
    * joins the expandable temp queue, including past the five visible slots (PRTS 卫戍协议/帮助 §手牌区); it does not
    * wait until the next round. The player's own in-place re-orientation still refuses with `HAND_FULL` when a lifted
    * summon would need a free null slot (`_roomForOutOfRange`). A summon stack that does sit in temp when its prep
@@ -232,21 +232,19 @@ export class PlayerPlacement {
     const occ = this.board.get(key) || null;
     if (occ === piece) return this._reorient(piece, dir);
     if (loc.area === 'board') {
-      // board → board: move or swap (the occupant must be legal on the source tile and keeps its own facing); an
-      // operator that changes its tile takes its summons off the board (back onto their stacks, _liftTokensOf) — its
-      // own summon swapped onto its old tile included, so that one needs no tile check
+      // board → board: move or swap (the occupant must be legal on the source tile and keeps its own facing). Summons
+      // stay where they are while their owner's final range still covers them; recompute() returns only the ones it
+      // leaves outside (2026-11-12 owner-reported official QoL: legal summons keep their identity and facing).
       if (occ) {
         const [sr, sc] = parseKey(loc.key);
         const ownSummon = occ.kind === 'token' && occ.ownerUid === piece.uid;
         if (!ownSummon && !this._legal(occ, sr, sc)) return fail(ERR.BAD_TILE);
         this.board.set(loc.key, occ);
-        if (occ.kind === 'chess') this._liftTokensOf(occ.uid);
       } else {
         this.board.delete(loc.key);
       }
       piece.dir = dir;
       this.board.set(key, piece);
-      this._liftTokensOf(piece.uid);
       this.recompute();
       return OK;
     }
@@ -319,8 +317,8 @@ export class PlayerPlacement {
     if (!this._legal(piece, r, c, ownerAfter)) return fail(ERR.BAD_TILE);
     if (occ === piece) return this._reorient(piece, dir);
     if (loc.area === 'board') {
-      // board → board: move or swap; an operator swapped onto the summon's old tile changed its tile, so its other
-      // summons go back onto their stacks like any moved operator (_liftTokensOf; the summon just placed stays)
+      // board → board: move or swap. The displaced operator's summons are reconciled against its final tile by
+      // recompute(): the ones still inside its range stay (identity and facing preserved), the rest return.
       if (occ) {
         const [sr, sc] = parseKey(loc.key);
         if (!this._legal(occ, sr, sc)) return fail(ERR.BAD_TILE);
@@ -330,7 +328,6 @@ export class PlayerPlacement {
       }
       piece.dir = dir;
       this.board.set(key, piece);
-      if (occ && occ.kind === 'chess') this._liftTokensOf(occ.uid, piece);
       this.recompute();
       return OK;
     }

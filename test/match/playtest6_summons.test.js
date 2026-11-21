@@ -2,8 +2,8 @@
 // The official rule (PRTS 卫戍协议/帮助 §战斗部署): "如果部署的干员拥有可手动部署的附属召唤物，则该召唤物会立刻加入手牌区 …
 // 根据召唤物部署数量上限（非初始持有量），发送等量召唤物至手牌区" — every manually deployable summon (shop state
 // tokenDisplayType DEFAULT; 凯瑟琳's 爬行号·防护单元 has no entry and is deployable in the base game) is a hand card as
-// soon as its owner stands on the board, a skill's summon only while that skill is equipped; "移动干员时，其所属召唤物全部
-// 退场并重置至手牌区" (also when a summon dragged onto its owner swaps the owner away); a summon stack left in the
+// soon as its owner stands on the board, a skill's summon only while that skill is equipped; moving an owner keeps the
+// summons still inside its range (2026-11-12 official QoL) and returns the rest to the hand; a summon stack left in the
 // 临时整备区 at the prep deadline "会于下一回合返还" (§手牌区). The battle side is test/content/playtest6_summons.test.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -104,7 +104,7 @@ test('巫恋 (S2 诅咒娃娃) sends a doll card like 赫默', () => {
   m.dispose();
 });
 
-test('moving an owner on the board sends its placed summons back to its card (PRTS "移动干员时…重置至手牌区")', () => {
+test('moving an owner on the board keeps its placed summons (2026-11-12 official QoL; unrestricted ones are not range-bound)', () => {
   const { m, ps } = prep();
   const cat = give(m, ps, CATHY);
   assert.deepEqual(move(m, cat.uid, { area: 'board', row: 10, col: 4 }), { ok: true });
@@ -116,12 +116,12 @@ test('moving an owner on the board sends its placed summons back to its card (PR
   // re-orienting in place is not a move: the devices stay
   assert.deepEqual(move(m, cat.uid, { area: 'board', row: 10, col: 4 }, 'UP'), { ok: true });
   assert.equal([...ps.board.values()].filter((p) => p.kind === 'token').length, 2);
-  // a real move: both devices leave the board and go back onto one card of 2
+  // a real move: both devices keep their tiles, identity and facing (only an out-of-range summon would return)
+  const before = new Map([...ps.board.entries()].filter(([, p]) => p.kind === 'token').map(([k, p]) => [k, structuredClone(p)]));
   assert.deepEqual(move(m, cat.uid, { area: 'board', row: 10, col: 7 }), { ok: true });
-  assert.equal([...ps.board.values()].filter((p) => p.kind === 'token').length, 0, 'no device left on the board');
-  const back = tokensOf(ps, DEVICE);
-  assert.equal(back.length, 1);
-  assert.equal(back[0].count, 2);
+  const after = [...ps.board.entries()].filter(([, p]) => p.kind === 'token');
+  assert.equal(after.length, 2, 'both devices stay on the board');
+  for (const [k, p] of after) assert.deepEqual(p, before.get(k), `${k}: unchanged`);
   checkInvariants(m);
   m.dispose();
 });
@@ -223,22 +223,23 @@ test('a summon dragged onto an operator swaps it away: that operator\'s other pl
   assert.deepEqual(move(m, devCard.uid, { area: 'board', row: 10, col: 3 }), { ok: true });
   assert.deepEqual(move(m, devCard.uid, { area: 'board', row: 11, col: 4 }, 'UP'), { ok: true });
   assert.deepEqual(move(m, stackOf(ps, DRONE).uid, { area: 'board', row: 10, col: 8 }), { ok: true });
-  // 凯瑟琳's device (10,3) dropped onto 赫默 (10,7): 赫默 takes 10,3, so her drone goes back to her card; 凯瑟琳 did not move
+  // 凯瑟琳's device (10,3) dropped onto 赫默 (10,7): 赫默 takes 10,3; his placed drone stays on its tile (the 2026-11-12
+  // official QoL keeps legal summons; only an out-of-range one would return)
   const devA = ps.board.get('10,3');
   assert.deepEqual(move(m, devA.uid, { area: 'board', row: 10, col: 7 }), { ok: true });
   assert.equal(ps.board.get('10,3')?.uid, hm.uid);
   assert.equal(ps.board.get('10,7')?.uid, devA.uid, 'the dragged device is where it was dropped');
-  assert.equal(ps.board.get('10,8'), undefined, '赫默\'s placed drone left the board');
-  assert.equal(stackOf(ps, DRONE)?.count, 1, '… back onto her card');
+  assert.equal(ps.board.get('10,8')?.kind, 'token', '赫默\'s placed drone stays on the board');
+  assert.equal(stackOf(ps, DRONE), null, '… and gains no card copy');
   assert.equal(ps.board.get('11,4')?.id, DEVICE, '凯瑟琳\'s other device stays');
-  // the other device (11,4) dropped onto its own owner (10,4): 凯瑟琳 takes 11,4; the dropped device stays at 10,4, her
-  // remaining placed device (10,7) goes back onto her card
+  // the other device (11,4) dropped onto its own owner (10,4): 凯瑟琳 takes 11,4; the dropped device stays at 10,4,
+  // and her remaining placed device (10,7) stays too
   const devB = ps.board.get('11,4');
   assert.deepEqual(move(m, devB.uid, { area: 'board', row: 10, col: 4 }), { ok: true });
   assert.equal(ps.board.get('11,4')?.uid, cat.uid);
   assert.equal(ps.board.get('10,4')?.uid, devB.uid);
-  assert.equal(ps.board.get('10,7'), undefined);
-  assert.equal(stackOf(ps, DEVICE)?.count, 1);
+  assert.equal(ps.board.get('10,7')?.id, DEVICE, 'the other device stays');
+  assert.equal(stackOf(ps, DEVICE), null);
   assert.equal(tokensOf(ps, DEVICE).reduce((n, p) => n + (p.count || 1), 0), 2, 'still 2 devices in all');
   checkInvariants(m);
   m.dispose();
@@ -258,32 +259,30 @@ test('a summon stack left in temp at the prep deadline comes back next round (PR
   ps.board.clear();
   ps.hand.fill(null);
   ps.recompute();
-  const cat = give(m, ps, CATHY);
-  assert.deepEqual(move(m, cat.uid, { area: 'board', row: 10, col: 4 }), { ok: true });
-  const card = stackOf(ps, DEVICE);
-  assert.deepEqual(move(m, card.uid, { area: 'board', row: 10, col: 3 }), { ok: true });
-  assert.deepEqual(move(m, card.uid, { area: 'board', row: 11, col: 4 }, 'UP'), { ok: true });
+  // 伺夜's wolf is range-bound: moving him past its reach is what returns the card (unrestricted summons now stay).
+  const VIGIL = 'chess_char_3_19_a';
+  const WOLF = 'token_10028_vigil_wolf';
+  const vigil = give(m, ps, VIGIL);
+  assert.deepEqual(move(m, vigil.uid, { area: 'board', row: 10, col: 4 }), { ok: true });
+  const card = stackOf(ps, WOLF);
+  assert.deepEqual(move(m, card.uid, { area: 'board', row: 11, col: 5 }, 'DOWN'), { ok: true });
   for (let i = 0; ps.hand.some((x) => x == null); i++) giveItem(m, ps, PLAIN[i]);
-  // moving 凯瑟琳 with a full hand: her devices go back as one card of 2, which overflows into temp and blocks Ready
-  assert.deepEqual(move(m, cat.uid, { area: 'board', row: 10, col: 7 }), { ok: true });
-  const inTemp = ps.temp.find((p) => p && p.kind === 'token' && p.id === DEVICE);
-  assert.equal(inTemp?.count, 2);
+  // moving 伺夜 out of the wolf's reach: it goes back as one card, which overflows into temp and blocks Ready
+  assert.deepEqual(move(m, vigil.uid, { area: 'board', row: 10, col: 7 }), { ok: true });
+  const inTemp = ps.temp.find((p) => p && p.kind === 'token' && p.id === WOLF);
+  assert.equal(inTemp?.count, 1);
   assert.deepEqual(m.handle('p_0', { t: 'g.ready', ready: true }), { error: ERR.TEMP_NOT_EMPTY });
   // the player leaves it there: the prep deadline removes the temp card …
   h.drive(() => m.phase === PHASE.COMBAT && m.round === 1, { ready: false });
-  assert.equal(tokensOf(ps, DEVICE).length, 0, 'removed with the temp slot at the deadline');
+  assert.equal(tokensOf(ps, WOLF).length, 0, 'removed with the temp slot at the deadline');
   // … and it comes back at the next round (still a full hand ⇒ temp again, where it can be placed)
   h.drive(() => m.phase === PHASE.PREP && m.round === 2, { ready: false });
-  const back = tokensOf(ps, DEVICE);
+  const back = tokensOf(ps, WOLF);
   assert.equal(back.length, 1);
-  assert.equal(back[0].count, 2, 'the deploy limit again');
-  assert.equal(back[0].ownerUid, cat.uid);
-  assert.deepEqual(move(m, back[0].uid, { area: 'board', row: 10, col: 5 }, 'RIGHT'), { ok: true });
-  assert.deepEqual(move(m, back[0].uid, { area: 'board', row: 11, col: 7 }, 'UP'), { ok: true });
-  assert.ok(ps.tempEmpty, 'placing both cleared temp');
-  // a later round start grants nothing more: both devices are on the board
-  h.drive(() => m.phase === PHASE.PREP && m.round === 3);
-  assert.equal(tokensOf(ps, DEVICE).reduce((n, p) => n + (p.count || 1), 0), 2);
+  assert.equal(back[0].count, 1, 'the deploy limit again');
+  assert.equal(back[0].ownerUid, vigil.uid);
+  const range = ps.summonRange(back[0]);
+  assert.ok(range && range.size > 0, 'the wolf still has a placement range under 伺夜\'s new tile');
   checkInvariants(m);
   m.dispose();
 });

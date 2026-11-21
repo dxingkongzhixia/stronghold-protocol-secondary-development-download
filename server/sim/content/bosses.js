@@ -701,10 +701,23 @@ function kitSpring(ab, e) {
     P.up = true;
     if (kind === 'arts') P.barrier = e.s.maxHp * (T(ab, '1.shield_ratio') ?? 0);
     if (kind === 'hits') P.hits = T(ab, '1.block_damage_max_times') ?? 0;
+    // actrpb_t_1[renegerate] / actrpc_t_1[regenerate] ON_BUFF_FINISH ClearEnemySp: the regenerated shield clears the
+    // attack-stack buff; actrpa (the arts barrier) has neither node.
+    if (kind !== 'arts') {
+      const list = e.mem.ab && e.mem.ab.list;
+      if (list) for (const a of list) if (a && typeof a.attack === 'function') a.n = 0;
+      b.removeBuff(e, 'boss:springRegen');
+    }
     b.addBuff(e, { key: 'boss:springShield', persist: true, visible: true, flags: { unblockable: true } }); // 护盾生效时，自身无法被阻挡
     b.fx('phase', { x: e.x, y: e.y, id: e.id, kind: `spring_${kind}` });
   };
-  const drop = (b) => { P.up = false; P.downAt = b.time; b.removeBuff(e, 'boss:springShield'); b.fx('shieldBreak', { x: e.x, y: e.y, id: e.id }); };
+  const drop = (b) => {
+    P.up = false; P.downAt = b.time; b.removeBuff(e, 'boss:springShield'); b.fx('shieldBreak', { x: e.x, y: e.y, id: e.id });
+    // The 9019 / 9020 regenerate buff carries SILENCED for regenerate_duration; 9018's flags are empty (PRTS 碎铳之簧).
+    if (kind !== 'arts' && regen > 0) {
+      b.addBuff(e, { key: 'boss:springRegen', duration: regen, flags: { silence: true }, status: 'silence', visible: true });
+    }
+  };
   const sk = ab.sk['1'];
   return [
     {

@@ -361,6 +361,8 @@ blackboard 后，先处理了这几类：
 - [x] 茧【淤困捕食】改为每侧随机 2 个（普通 2/4，隐秘核心 3/6，按技能黑框；普通攻击仍每侧血最高 3 个）。
 - [x] **`enemy_9027_acfnca` 的 `HitPoint` 正确值**（2026-11-18 查清，客户端重抽）：上游的 `0,-0.779112,-0.303` **不是坏点**，是从客户端抽出来的真值——该 prefab 的根 `HitPoint` 局部仍是标准 `(0, 1.8, 0)`，差别全在它的 `Graphic` 节点被摆在 `y = -1.2`（其余敌人都是 `-0.2`）。本树渲染只取 `Graphic` 的 −30° 倾角、从不取它的位移（`render/vfx/mounts.js` 的 `graphicRotation`），所以按 prefab 原样合成会让该单位所有锚点比我们画出来的模型低一格。`fx.py` 的 `skin_points` 现在会把「比常规摆放低半格以上」的 `Graphic` 位移扣掉（位移换成 `(0,-0.2,-0.06)`，旋转与缩放保留），重抽后该单位的三点 = `HitPoint (0, 0.220888, -0.303)`、`HeadPoint (0, 0.735307, -0.6)`、`SpecialPoint0 (0, 1, 0)`；`index.json` 只改了这一处（其余 5563 个 prefab、679 个 skin、685 个 unit 逐键比对不变），`test/local-extract-fx.test.js` 34/34、`test/render/vfx-{regulation,origins,orient,skillfx}.test.js` 68/68。
 
+- [x] **碎铳之簧的再生沉默**（2026-11-21 移植，上游 round 84）：9019 / 9020 的 `regenerate_duration` 期间带 `silence`（`boss:springRegen`，`flags.silence`），护盾重新升起时清掉攻击叠层与旧沉默；9018（法术屏障）两者皆无。`server/sim/content/bosses.js` `kitSpring`，`test/content/hidden-gun-pursuit.test.js`。
+
 仍未处理（2026-11-18 记录）：
 
 - [ ] **后兽【返璞】的分支内容**：`dyjsww_summon` 是 ISW-DF 末狩关卡的 `branches`，本机 `.cache/gamedata` 只有 act3 关卡（`level_autochess_enemy_data.json` 的 branches 只有 `dragon`；act3 关卡本体有 `acsgnt` / `acfnca` / `left_acfncb` / `summon_enemy` / `boss_summon_enemy` / `dslily_dstnta` 等分支，没有 `dyjsww`），没有 ISW-DF 关卡。**客户端也帮不上**：`hot_update_list.json` 里 `gamedata` / `excel` 各出现 0 次、没有 `levels/` 的 bundle，关卡与表只在 gamedata 镜像里。拿到关卡 JSON 后放进 `stages.json` 的 `branches` 即可生效。

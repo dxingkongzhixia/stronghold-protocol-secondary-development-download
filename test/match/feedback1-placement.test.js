@@ -6,10 +6,10 @@
 //      says ALL.
 //   #9 "干员伺夜这样的战术家的战术点能被错误的被放到攻击范围之外" — the tacticians' summons (伺夜's 狼群, 缪尔赛思's 流形)
 //      read "只能部署在召唤者攻击范围内" (token description; PRTS 狼群 特性): the piece may only stand on a tile of its
-//      owner's attack range (the rotated grid of its board tile and facing). Re-orienting the owner in place keeps the
-//      piece while it is still inside, else sends it back to its stack [ASSUMED] (refused, HAND_FULL, when it would have
-//      nowhere to go); moving the owner sends it back anyway (PRTS 卫戍协议/帮助 "移动干员时，其所属召唤物全部退场并重置
-//      至手牌区") — with no room it leaves the board until the next round start.
+//      owner's attack range (the rotated grid of its board tile and facing). Re-orienting the owner in place, or moving
+//      it, keeps the piece while its final range still covers it; otherwise it goes back to its stack [ASSUMED]
+//      (refused, HAND_FULL, when it would have nowhere to go) — 2026-11-12 official QoL, upstream #969; the old PRTS
+//      help said every summon returns on a move.
 // The sim side (突袭 landing tile, tactical point) is test/sim/feedback1-water.test.js.
 // 高台: the owner's decision of 2026-10-05 (reversing the one of 2026-10-04, elite 歌蕾蒂娅 with HOK-Y only) follows
 // PRTS — every MELEE chess whose trait reads 「可以放置于远程位」 (the 钩索师 / 推击手 branch trait: 歌蕾蒂娅, 崖心, 见行者,
