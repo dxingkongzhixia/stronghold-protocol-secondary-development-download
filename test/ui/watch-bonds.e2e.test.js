@@ -607,17 +607,16 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       const mv = await matchView(guest);
       const pair = mv.fields.find((f) => f.players.length === 2);
       const lone = mv.fields.find((f) => f.players.length === 1);
-      assert.ok(pair && lone && mv.field?.fieldId === mv.fields[0].fieldId, `a pair field and a lone one, the first auto-observed (${JSON.stringify(mv)})`);
-      assert.equal(pair.fieldId, mv.fields[0].fieldId, 'the pair field is listed first');
-      // the auto-observed field shows its LEFT player's pill; the field's player array order need not be the side order
-      const observed = await guest.page.$eval('.chud__observe .vswitch__label', (e) => e.textContent.trim()).catch(() => null);
-      const firstPid = pair.players.find((pid) => mv.names[pid] === observed) ?? pair.players[0];
+      assert.ok(pair && lone, `a pair field and a lone one (${JSON.stringify(mv)})`);
+      // the app auto-observes the viewer's OWN field (here the host's lone one, the guest being eliminated); scouting
+      // the AI pair is explicit
+      assert.equal(mv.field?.fieldId, lone.fieldId, 'the auto-observed field is the viewer\'s own lone field');
+      const firstPid = pair.players[0];
       const first = mv.names[firstPid];
+      await watchMate(guest, first);
       await ownerIs(guest, first);
       let st = await stripOf(guest);
-      // the auto-observed pair is shown by the single observe pill, which now names the observed player (the old 全景
-      // layer bar appears only after an explicit pick, below)
-      assert.deepEqual([st.owner, st.bonds, st.observe], [first, mv.bonds[first], first], 'auto-observed pair: the first player, never the spectator\'s own');
+      assert.deepEqual([st.owner, st.bonds], [first, mv.bonds[first]], 'after scouting the pair: the first player\'s strip');
       await guest.shot('auto');
       // a card's bond chip (review): the watched player's own unit opens their bond popup; the popup's count is the
       // number the chip shows. (The old 全景 view let the OTHER player's unit be clicked from one camera; the current
