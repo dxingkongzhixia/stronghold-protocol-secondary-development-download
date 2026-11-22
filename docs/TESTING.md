@@ -22,7 +22,7 @@
 | 临时跳过 | `{ skip: '<原因>（issue #N）' }`——原因与工单号必须写出来，且要有恢复条件 |
 | 移动 golden | 先归因（§6），代码与 golden 分两个提交 |
 | 新增/拆分/改名测试文件 | 跑 `npm run test:inventory` 重新生成清单（否则 `npm test` 会红） |
-| 函数变大 | 单函数**自有行数**（扣除嵌套函数）超过 **300** 视为超预算：不得新增、不得变大；`npm run complexity:check` 对照 `tools/complexity-budget.json`，存量大函数只许缩小 |
+| 函数变大 | 单函数**自有逻辑行**（扣除嵌套函数、注释和空行）超过 **300** 视为超预算：不得新增、不得变大；`npm run complexity:check` 对照 `tools/complexity-budget.json`，存量大函数只许缩小 |
 | 改了文档 | 跑 `npm run docs:check`；涉及命令/路径的，守卫测试会核对 |
 | 浏览器 UI 改动 | 同步 `data-testid` / 角色 / aria 的契约（§5），并跑 smoke；深水区跑 `test:e2e:assets` |
 
@@ -77,7 +77,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 生成型文档 | `npm run docs:index`（`INDEX` + `TEST-INVENTORY`）；`npm run docs:check` 校验 |
 | 手机矩阵 | `npm run check:mobile` |
 | Lint / 类型 / 导入 | `npm run lint`（0 error，warning 预算 **203**，只降不升）· `npm run typecheck` · `npm run check:imports` |
-| 复杂度预算 | `npm run complexity`（报告）· `npm run complexity:check`（超过 300 行的新函数/变大 → 红；存量见 `tools/complexity-budget.json`） |
+| 复杂度预算 | `npm run complexity`（报告）· `npm run complexity:check`（超过 300 逻辑行的新函数/变大 → 红；存量见 `tools/complexity-budget.json`） |
 | 数据重建 | `node tools/build-data.mjs --offline`（必须零 diff） |
 | 上游侦察 | `node tools/check-upstream.mjs` |
 

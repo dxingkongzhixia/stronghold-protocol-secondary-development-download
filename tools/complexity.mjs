@@ -6,8 +6,9 @@
 //   node tools/complexity.mjs --check    exit 1 when a function over the limit is not in the budget or grew
 //   node tools/complexity.mjs --write    rewrite tools/complexity-budget.json from the current tree
 //
-// Metric: a function's OWN lines — the lines of its body minus the bodies of the functions nested in it (so a
-// factory/screen full of small closures is not counted as one giant function). Default limit: 300 own lines.
+// Metric: a function's OWN LOGICAL lines — its body, minus the bodies of the functions nested in it, minus blank lines
+// and comment lines (so a documented factory/screen full of small closures is not counted as one giant function, and
+// doc comments do not inflate the budget). Default limit: 300 own logical lines.
 //
 // The policy is global: server/, shared/, public/js/ and tools/ (vendor excluded). Tests are excluded: a test's setup
 // is often legitimately long, and the suite already has its own budgets. The budget file is the record of the
@@ -57,12 +58,18 @@ const nestedFunctions = (node) => {
   return out;
 };
 
-/** Every function's own line count: `{ file, line, name, own }`. */
+/** Every function's own logical line count (nested bodies, blank lines and comments excluded): `{ file, line, name, own }`. */
 export function scan() {
   const rows = [];
   for (const file of files) {
+    const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const comments = [];
     let ast;
-    try { ast = acorn.parse(fs.readFileSync(path.join(ROOT, file), 'utf8'), { ecmaVersion: 'latest', sourceType: 'module', locations: true, allowHashBang: true }); } catch { continue; }
+    try { ast = acorn.parse(src, { ecmaVersion: 'latest', sourceType: 'module', locations: true, allowHashBang: true, onComment: comments }); } catch { continue; }
+    const lines = src.split('\n');
+    const commentLine = new Set();
+    for (const c of comments) for (let l = c.loc.start.line; l <= c.loc.end.line; l++) commentLine.add(l);
+    const isLogical = (l) => lines[l - 1].trim() !== '' && !commentLine.has(l);
     (function visit(node, ctx) {
       if (!node || typeof node.type !== 'string') return;
       let next = ctx;
@@ -72,11 +79,14 @@ export function scan() {
         next = { ...ctx, key: node.id.name };
       }
       if (FN.has(node.type)) {
-        const nested = nestedFunctions(node);
-        const total = node.loc.end.line - node.loc.start.line + 1;
-        const inner = nested.reduce((s, n) => s + (n.loc.end.line - n.loc.start.line + 1), 0);
+        const inner = nestedFunctions(node).map((n) => [n.loc.start.line, n.loc.end.line]);
+        let own = 0;
+        for (let l = node.loc.start.line; l <= node.loc.end.line; l++) {
+          if (inner.some(([a, b]) => l >= a && l <= b)) continue;
+          if (isLogical(l)) own++;
+        }
         const name = node.id?.name || next.key || `@${node.loc.start.line}`;
-        rows.push({ file, line: node.loc.start.line, name, own: Math.max(0, total - inner) });
+        rows.push({ file, line: node.loc.start.line, name, own });
         next = { ...next, key: null };
       }
       eachChild(node, (c) => visit(c, next));
@@ -103,7 +113,7 @@ if (isMain) {
     const functions = {};
     for (const r of over) functions[keyOf(r)] = r.own;
     fs.writeFileSync(path.join(ROOT, BUDGET), JSON.stringify({ limit: LIMIT, functions }, null, 2) + '\n');
-    console.log(`${BUDGET}: ${over.length} function(s) over ${LIMIT} own lines`);
+    console.log(`${BUDGET}: ${over.length} function(s) over ${LIMIT} own logical lines`);
     process.exit(0);
   }
   const budget = readBudget();
@@ -117,7 +127,7 @@ if (isMain) {
   const seen = new Set(over.map(keyOf));
   const stale = Object.keys(known).filter((k) => !seen.has(k));
   for (const k of stale) console.warn(`[complexity] stale budget entry (renamed or shrunk — run --write): ${k}`);
-  console.log(`[complexity] ${files.length} files; ${rows.length} functions; >${LIMIT} own lines: ${over.length}; ${WARN}–${LIMIT}: ${warn}`);
+  console.log(`[complexity] ${files.length} files; ${rows.length} functions; >${LIMIT} own logical lines: ${over.length}; ${WARN}–${LIMIT}: ${warn}`);
   for (const r of over.slice(0, 8)) console.log(`  ${String(r.own).padStart(5)}L  ${r.file}:${r.line}  ${r.name}`);
   if (process.argv.includes('--check')) {
     if (problems.length) { for (const p of problems) console.error(`[complexity] ${p}`); process.exit(1); }
