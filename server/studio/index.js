@@ -884,6 +884,139 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
 
   /** The API (see the header). @returns {Promise<boolean>} whether it answered */
   async function api(req, res, route, query) {
+
+    /** The `/api/plugins` POST: create a template plugin (Keel templates included). */
+    async function createPluginRoute(req) {
+      if (!mayChange(req)) return false;
+      const body = await readJson(req, 64 * 1024);
+      if (typeof body.template === 'string' && body.template.startsWith('keel-')) {
+        const id = text(body.id, 64);
+        if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
+        const made = createKeelPlugin({ template: body.template, id, name: body.name, pluginsDir: files.base, root: path.resolve(publicDir, '..') });
+        if (!made.ok) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 400, { template: text(body.template, 40), detail: made.error }, made.error);
+        log.info?.(`[studio] new Keel plugin ${id} (${body.template})`);
+        return json(201, changed(id));
+      }
+      const tpl = templateById(body.template);
+      if (!tpl) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 404, { template: text(body.template, 40) });
+      const id = text(body.id, 64);
+      if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
+      const t = body.target ? targetOf(targets().targets, text(body.target, 200)) : null;
+      if (body.target && !t) throw new StudioError('PLUGIN_STUDIO_TARGET', 404, { target: text(body.target, 80) });
+      if (t && !tpl.kinds.includes(t.kind)) throw new StudioError('PLUGIN_STUDIO_TARGET', 400, { target: targetSpec(t) });
+      const made = createPlugin(tpl, { id, name: body.name, target: t, authors: body.authors, license: body.license, credits: body.credits, options: body.options || {}, data: tpl.build && tpl.class !== 'cosmetic' ? readStudioData(dataDir) : null, publicDir, lang: body.lang === 'en' ? 'en' : 'zh' });
+      if (['bond', 'item', 'trait', 'offers', 'rules', 'theme', 'notices', 'fx', 'skins'].includes(tpl.id)) authoring.generate(id, { template: tpl.id, target: body.target, options: body.options || {} }, made.manifest);
+      files.root(id, { create: true });
+      files.write(id, PLUGIN_MANIFEST, Buffer.from(manifestText(made.manifest)));
+      for (const [rel, text] of Object.entries(made.files)) files.write(id, rel, Buffer.from(text), { generated: true });
+      if (made.authoring) files.writeSidecar(id, SIDECAR, Buffer.from(manifestText({ v: 1, authoring: made.authoring })));
+      else if (t) saveSections(id, [{ template: tpl.id, target: targetSpec(t) }]);
+      log.info?.(`[studio] new plugin ${id} (${tpl.id}${t ? `, ${targetSpec(t)}` : ''})`);
+      return json(201, changed(id));
+    }
+
+    /** The `/api/plugins/<id>/...` routes (state, preview, zip, files, manifest, slot, authoring, meta, ...). */
+    async function pluginRoutes(req, res, route, query, method) {
+      const m = /^plugins\/([^/]+)(?:\/(.*))?$/.exec(route);
+      if (!m) return false;
+      const id = decodeURIComponent(m[1]);
+      const sub = m[2] ?? '';
+      if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
+      if (method === 'GET' || method === 'HEAD') {
+        if (sub === '') return json(200, stateOf(id, keyed(req)));
+        if (sub === 'preview') return json(200, previews.preview(id, files.root(id)));
+        if (sub === 'zip') {
+          if (method === 'HEAD') { files.root(id); res.writeHead(200, { 'Content-Type': 'application/zip', 'Cache-Control': 'no-store' }); res.end(); return true; }
+          let z;
+          try { z = zipPlugin(files.root(id)); } catch (e) {
+            if (e?.code === 'PLUGIN_FILE_SIZE') throw new StudioError('PLUGIN_FILE_SIZE', 413, { where: e.where || '' }, e.message);
+            throw e;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': z.body.length, 'Cache-Control': 'no-store',
+            'Content-Disposition': `attachment; filename="${z.name}"` });
+          res.end(method === 'HEAD' ? undefined : z.body);
+          return true;
+        }
+        const f = /^(?:f\/[0-9a-f]{8}|files)\/(.+)$/.exec(sub);
+        if (f) { await servePluginFile(req, res, id, f[1].split('/').map(decodeURIComponent).join('/'), query); return true; }
+        return false;
+      }
+      if (!mayChange(req)) return false;
+      if (method === 'PUT' && sub === 'manifest') {
+        const body = await readBody(req, STUDIO_LIMITS.manifestBytes);
+        let v;
+        try { v = JSON.parse(body.toString('utf8')); } catch (e) { throw new StudioError('PLUGIN_JSON', 400, { file: PLUGIN_MANIFEST, detail: String(e?.message || e) }); }
+        if (!isObj(v)) throw new StudioError('PLUGIN_MANIFEST_SHAPE', 400, {});
+        files.root(id);
+        // a native manifest 3: validated (manifest rules + graph) and written to the folder's own descriptor only
+        if (files.keel(id)) { saveKeelManifest(id, keelChecked(id, v)); return json(200, changed(id)); }
+        files.write(id, PLUGIN_MANIFEST, Buffer.from(manifestText(v)));
+        return json(200, changed(id));
+      }
+      const fileRoute = /^files\/(.+)$/.exec(sub);
+      if (fileRoute && (method === 'PUT' || method === 'DELETE')) {
+        const rel = fileRoute[1].split('/').map(decodeURIComponent).join('/');
+        if (method === 'DELETE') files.remove(id, rel);
+        else {
+          const bytes = await readBody(req, STUDIO_LIMITS.fileBytes);
+          // Resolve paths/links before looking at bytes; the candidate refuses links elsewhere too.
+          files.resolve(id, rel, { forWrite: true });
+          await editMediaDraft(files, id, staged => staged.write(id, rel, bytes), { dataDir });
+        }
+        return json(200, changed(id));
+      }
+      if (method !== 'POST') return false;
+      if (sub === 'slot') return json(200, await putSlot(id, await readJson(req, STUDIO_LIMITS.bodyBytes)));
+      const body = await readJson(req, sub === 'authoring' ? STUDIO_LIMITS.bodyBytes : 256 * 1024);
+      if (sub === 'authoring') { await authoring.saveAsync(id, body); return json(200, changed(id)); }
+      if (sub === 'meta') {
+        if (files.keel(id)) {
+          const next = editKeelMeta(keelManifestOf(id), body.fields, typeof body.lang === 'string' ? body.lang : 'zh');
+          saveKeelManifest(id, keelChecked(id, next));
+          return json(200, changed(id));
+        }
+        const p = openPlugin(files, id); editMeta(p, body.fields, typeof body.lang === 'string' ? body.lang : 'zh'); p.save(); return json(200, changed(id));
+      }
+      if (sub === 'modules') {
+        if (!files.keel(id)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules are a manifest 3 field' });
+        if (!Array.isArray(body.modules)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules: a list' });
+        const manifest = keelManifestOf(id);
+        saveKeelManifest(id, keelChecked(id, { ...manifest, modules: body.modules }));
+        return json(200, changed(id));
+      }
+      if (sub === 'sections') { files.root(id); saveSections(id, body.sections); return json(200, stateOf(id)); }
+      if (sub === 'ref') {
+        const key = text(body.ref, 200);
+        const at = keyList(body.at);
+        const p = openPlugin(files, id);
+        const before = filesOfValue(getIn(p.overlay, at));
+        setSlot(p, at, { ref: key });
+        p.save();
+        // the files the slot named before go when nothing names them now (as clear and a new file do)
+        const still = filesOfOverlay(p.overlay);
+        for (const rel of before) if (!still.has(rel)) { try { files.remove(id, rel); } catch { /* gone */ } }
+        return json(200, changed(id));
+      }
+      if (sub === 'clear') {
+        const at = keyList(body.at);
+        const p = openPlugin(files, id);
+        const before = filesOfValue(getIn(p.overlay, at));
+        clearSlot(p, at);
+        p.save();
+        const still = filesOfOverlay(p.overlay);
+        for (const rel of before) if (!still.has(rel)) { try { files.remove(id, rel); } catch { /* gone */ } }
+        return json(200, changed(id));
+      }
+      if (sub === 'fix') return json(200, fix(id, body));
+      if (sub === 'pack') {
+        const r = packPlugin(files.root(id), { vanilla: registry.vanillaAssets(), dataDir });
+        const list = issueList();
+        list.take(r.build);
+        log.info?.(`[studio] ${id}: pack — ${r.wrote ? 'plugin.lock.json written' : 'not written'}`);
+        return json(200, { ...changed(id), pack: { wrote: r.wrote, issues: list.issues } });
+      }
+      return false;
+    }
     const q = new URLSearchParams(query);
     const method = req.method;
     /** A read (HEAD answers as GET does, without the body). */
@@ -980,34 +1113,7 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
       return json(route === 'catalog' ? 200 : 201, body);
     }
     if (route === 'plugins' && read) return json(200, { plugins: listPlugins() });
-    if (route === 'plugins' && method === 'POST') {
-      if (!mayChange(req)) return false;
-      const body = await readJson(req, 64 * 1024);
-      if (typeof body.template === 'string' && body.template.startsWith('keel-')) {
-        const id = text(body.id, 64);
-        if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
-        const made = createKeelPlugin({ template: body.template, id, name: body.name, pluginsDir: files.base, root: path.resolve(publicDir, '..') });
-        if (!made.ok) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 400, { template: text(body.template, 40), detail: made.error }, made.error);
-        log.info?.(`[studio] new Keel plugin ${id} (${body.template})`);
-        return json(201, changed(id));
-      }
-      const tpl = templateById(body.template);
-      if (!tpl) throw new StudioError('PLUGIN_STUDIO_TEMPLATE', 404, { template: text(body.template, 40) });
-      const id = text(body.id, 64);
-      if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
-      const t = body.target ? targetOf(targets().targets, text(body.target, 200)) : null;
-      if (body.target && !t) throw new StudioError('PLUGIN_STUDIO_TARGET', 404, { target: text(body.target, 80) });
-      if (t && !tpl.kinds.includes(t.kind)) throw new StudioError('PLUGIN_STUDIO_TARGET', 400, { target: targetSpec(t) });
-      const made = createPlugin(tpl, { id, name: body.name, target: t, authors: body.authors, license: body.license, credits: body.credits, options: body.options || {}, data: tpl.build && tpl.class !== 'cosmetic' ? readStudioData(dataDir) : null, publicDir, lang: body.lang === 'en' ? 'en' : 'zh' });
-      if (['bond', 'item', 'trait', 'offers', 'rules', 'theme', 'notices', 'fx', 'skins'].includes(tpl.id)) authoring.generate(id, { template: tpl.id, target: body.target, options: body.options || {} }, made.manifest);
-      files.root(id, { create: true });
-      files.write(id, PLUGIN_MANIFEST, Buffer.from(manifestText(made.manifest)));
-      for (const [rel, text] of Object.entries(made.files)) files.write(id, rel, Buffer.from(text), { generated: true });
-      if (made.authoring) files.writeSidecar(id, SIDECAR, Buffer.from(manifestText({ v: 1, authoring: made.authoring })));
-      else if (t) saveSections(id, [{ template: tpl.id, target: targetSpec(t) }]);
-      log.info?.(`[studio] new plugin ${id} (${tpl.id}${t ? `, ${targetSpec(t)}` : ''})`);
-      return json(201, changed(id));
-    }
+    if (route === 'plugins' && method === 'POST') return createPluginRoute(req);
     // (before the plugin id routes: POST plugins/<id> itself is none, so a plugin named "remove" keeps all of its own)
     if (route === 'plugins/remove' && method === 'POST') {
       if (!mayChange(req)) return false;
@@ -1028,105 +1134,7 @@ export function createStudio({ publicDir, pluginsDir, dataDir, registry, lobby =
       const products = Array.isArray(result.report?.products) ? result.report.products : [];
       return json(200, { report: result.report, plugins: products.map((p) => ({ id: p.id, class: p.class })) });
     }
-    const m = /^plugins\/([^/]+)(?:\/(.*))?$/.exec(route);
-    if (!m) return false;
-    const id = decodeURIComponent(m[1]);
-    const sub = m[2] ?? '';
-    if (!isPluginId(id)) throw new StudioError('PLUGIN_ID', 400, { id: id.slice(0, 40) });
-    if (method === 'GET' || method === 'HEAD') {
-      if (sub === '') return json(200, stateOf(id, keyed(req)));
-      if (sub === 'preview') return json(200, previews.preview(id, files.root(id)));
-      if (sub === 'zip') {
-        if (method === 'HEAD') { files.root(id); res.writeHead(200, { 'Content-Type': 'application/zip', 'Cache-Control': 'no-store' }); res.end(); return true; }
-        let z;
-        try { z = zipPlugin(files.root(id)); } catch (e) {
-          if (e?.code === 'PLUGIN_FILE_SIZE') throw new StudioError('PLUGIN_FILE_SIZE', 413, { where: e.where || '' }, e.message);
-          throw e;
-        }
-        res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Length': z.body.length, 'Cache-Control': 'no-store',
-          'Content-Disposition': `attachment; filename="${z.name}"` });
-        res.end(method === 'HEAD' ? undefined : z.body);
-        return true;
-      }
-      const f = /^(?:f\/[0-9a-f]{8}|files)\/(.+)$/.exec(sub);
-      if (f) { await servePluginFile(req, res, id, f[1].split('/').map(decodeURIComponent).join('/'), query); return true; }
-      return false;
-    }
-    if (!mayChange(req)) return false;
-    if (method === 'PUT' && sub === 'manifest') {
-      const body = await readBody(req, STUDIO_LIMITS.manifestBytes);
-      let v;
-      try { v = JSON.parse(body.toString('utf8')); } catch (e) { throw new StudioError('PLUGIN_JSON', 400, { file: PLUGIN_MANIFEST, detail: String(e?.message || e) }); }
-      if (!isObj(v)) throw new StudioError('PLUGIN_MANIFEST_SHAPE', 400, {});
-      files.root(id);
-      // a native manifest 3: validated (manifest rules + graph) and written to the folder's own descriptor only
-      if (files.keel(id)) { saveKeelManifest(id, keelChecked(id, v)); return json(200, changed(id)); }
-      files.write(id, PLUGIN_MANIFEST, Buffer.from(manifestText(v)));
-      return json(200, changed(id));
-    }
-    const fileRoute = /^files\/(.+)$/.exec(sub);
-    if (fileRoute && (method === 'PUT' || method === 'DELETE')) {
-      const rel = fileRoute[1].split('/').map(decodeURIComponent).join('/');
-      if (method === 'DELETE') files.remove(id, rel);
-      else {
-        const bytes = await readBody(req, STUDIO_LIMITS.fileBytes);
-        // Resolve paths/links before looking at bytes; the candidate refuses links elsewhere too.
-        files.resolve(id, rel, { forWrite: true });
-        await editMediaDraft(files, id, staged => staged.write(id, rel, bytes), { dataDir });
-      }
-      return json(200, changed(id));
-    }
-    if (method !== 'POST') return false;
-    if (sub === 'slot') return json(200, await putSlot(id, await readJson(req, STUDIO_LIMITS.bodyBytes)));
-    const body = await readJson(req, sub === 'authoring' ? STUDIO_LIMITS.bodyBytes : 256 * 1024);
-    if (sub === 'authoring') { await authoring.saveAsync(id, body); return json(200, changed(id)); }
-    if (sub === 'meta') {
-      if (files.keel(id)) {
-        const next = editKeelMeta(keelManifestOf(id), body.fields, typeof body.lang === 'string' ? body.lang : 'zh');
-        saveKeelManifest(id, keelChecked(id, next));
-        return json(200, changed(id));
-      }
-      const p = openPlugin(files, id); editMeta(p, body.fields, typeof body.lang === 'string' ? body.lang : 'zh'); p.save(); return json(200, changed(id));
-    }
-    if (sub === 'modules') {
-      if (!files.keel(id)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules are a manifest 3 field' });
-      if (!Array.isArray(body.modules)) throw new StudioError('PLUGIN_STUDIO_REQUEST', 400, { detail: 'modules: a list' });
-      const manifest = keelManifestOf(id);
-      saveKeelManifest(id, keelChecked(id, { ...manifest, modules: body.modules }));
-      return json(200, changed(id));
-    }
-    if (sub === 'sections') { files.root(id); saveSections(id, body.sections); return json(200, stateOf(id)); }
-    if (sub === 'ref') {
-      const key = text(body.ref, 200);
-      const at = keyList(body.at);
-      const p = openPlugin(files, id);
-      const before = filesOfValue(getIn(p.overlay, at));
-      setSlot(p, at, { ref: key });
-      p.save();
-      // the files the slot named before go when nothing names them now (as clear and a new file do)
-      const still = filesOfOverlay(p.overlay);
-      for (const rel of before) if (!still.has(rel)) { try { files.remove(id, rel); } catch { /* gone */ } }
-      return json(200, changed(id));
-    }
-    if (sub === 'clear') {
-      const at = keyList(body.at);
-      const p = openPlugin(files, id);
-      const before = filesOfValue(getIn(p.overlay, at));
-      clearSlot(p, at);
-      p.save();
-      const still = filesOfOverlay(p.overlay);
-      for (const rel of before) if (!still.has(rel)) { try { files.remove(id, rel); } catch { /* gone */ } }
-      return json(200, changed(id));
-    }
-    if (sub === 'fix') return json(200, fix(id, body));
-    if (sub === 'pack') {
-      const r = packPlugin(files.root(id), { vanilla: registry.vanillaAssets(), dataDir });
-      const list = issueList();
-      list.take(r.build);
-      log.info?.(`[studio] ${id}: pack — ${r.wrote ? 'plugin.lock.json written' : 'not written'}`);
-      return json(200, { ...changed(id), pack: { wrote: r.wrote, issues: list.issues } });
-    }
-    return false;
+    return pluginRoutes(req, res, route, query, method);
   }
 
   /**
