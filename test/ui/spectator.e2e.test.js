@@ -54,7 +54,8 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       await spec.click('.hub-dialog .join-row input');
       await spec.page.keyboard.type(room.code);
       await spec.click('.hub-dialog .join-row button', '观战');
-      await spec.page.waitForSelector('.room-screen .specbar__who.is-me', { timeout: 10000 });
+      // the spectator's room line: the hub-era room bar keeps 观战中 in its status line (the old .specbar__who is gone)
+      await spec.page.waitForSelector('.room-screen .room-bar__status .t-lo', { timeout: 15000 });
       const roomView = await spec.page.evaluate(() => ({
         bar: document.querySelector('.room-bar__right .btn--xl')?.textContent || '',
         barDisabled: !!document.querySelector('.room-bar__right .btn--xl')?.disabled,

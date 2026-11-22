@@ -588,7 +588,7 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       for (const c of [host, guest]) await c.waitFor((s) => s.phase === 'FINAL_ASSAULT', 'Final Assault', 90000);
       // the eliminated guest answers the official 协议已失效 dialog (PR #705) with 继续观战 before watching
       await continueWatching(guest);
-      await guest.page.waitForSelector('.chud__layers', { timeout: 20000 });
+      await guest.page.waitForSelector('.chud', { timeout: 20000 }); // the combat HUD (the old .chud__layers wrapper is gone)
       await sleep(1000);
       const mv = await matchView(guest);
       const pair = mv.fields.find((f) => f.players.length === 2);
