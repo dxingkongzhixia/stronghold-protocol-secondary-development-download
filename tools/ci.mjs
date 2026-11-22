@@ -61,6 +61,7 @@ export const STEPS = [
   { id: 'smoke', ci: { job: 'test', name: 'Server smoke test (boot, /healthz, index.html, doctor)' },
     describe: `server on a free port: GET ${SMOKE_PATHS.join(', ')}; node tools/doctor.mjs` },
   { id: 'lint', ci: { job: 'tooling', name: 'Lint (warning budget 203)' }, npm: 'lint', describe: 'eslint . --max-warnings 203' },
+  { id: 'complexity', ci: { job: 'tooling', name: 'Complexity budget (function size)' }, npm: 'complexity:check', describe: 'node tools/complexity.mjs --check' },
   { id: 'imports', ci: { job: 'tooling', name: 'Import boundaries' }, npm: 'check:imports', describe: 'node tools/check-imports.mjs' },
   { id: 'typecheck', ci: { job: 'tooling', name: 'Typecheck' }, npm: 'typecheck', describe: 'tsc --noEmit --checkJs -p jsconfig.json' },
   { id: 'golden-tests', ci: { job: 'golden', name: 'Golden — suite checks (digests + corpus integrity)' }, npm: 'test:golden', describe: 'node --test test/golden.test.js test/golden-versions.test.js test/golden-diy.test.js test/golden-standins.test.js' },
@@ -336,6 +337,7 @@ function runStep(step, env) {
     case 'test': return node(['--test', 'test/**/*.test.js', 'test/e2e/coop.e2e.mjs', 'plugins/_template/**/*.test.js'], env);
     case 'smoke': return smoke(env);
     case 'lint': return node([binPath('eslint', 'eslint'), '.', '--max-warnings', '203'], env);
+  case 'complexity': return node(['tools/complexity.mjs', '--check'], env);
     case 'imports': return node(['tools/check-imports.mjs'], env);
     case 'typecheck': return node([binPath('typescript', 'tsc'), '--noEmit', '--checkJs', '-p', 'jsconfig.json'], env);
     case 'golden': return node(['tools/golden.mjs'], env);

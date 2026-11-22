@@ -1,0 +1,13 @@
+{
+  "limit": 300,
+  "functions": {
+    "server/plugins/forgeImport.js::planForgeImport": 791,
+    "public/js/screens/game.js::MatchScreen": 584,
+    "public/js/render/app.js::createFieldView": 509,
+    "server/http/routes/admin.js::adminRoute": 414,
+    "server/match/Match.js::constructor": 352,
+    "tools/assets/plan.mjs::buildPlan": 337,
+    "tools/plugin.mjs::main": 321,
+    "server/plugins/officialUnitBuilder.js::createOfficialUnitBuilders": 312
+  }
+}

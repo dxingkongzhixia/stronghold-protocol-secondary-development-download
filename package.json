@@ -30,6 +30,8 @@
     "test:browser:smoke": "node tools/browser-smoke.mjs",
     "test:guard": "node tools/hang-guard.mjs",
     "test:inventory": "node tools/test-inventory.mjs",
+    "complexity": "node tools/complexity.mjs",
+    "complexity:check": "node tools/complexity.mjs --check",
     "test:e2e:assets": "node tools/e2e-assets.mjs",
     "test:fast": "node tools/test-fast.mjs",
     "test:shard": "node tools/ci-shards.mjs --run",

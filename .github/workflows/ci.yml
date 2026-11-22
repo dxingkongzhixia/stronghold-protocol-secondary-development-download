@@ -94,6 +94,9 @@ jobs:
       - name: Lint (warning budget 203)
         run: npm run lint
 
+      - name: Complexity budget (function size)
+        run: npm run complexity:check
+
       - name: Import boundaries
         run: npm run check:imports
 
