@@ -12,7 +12,8 @@ import path from 'node:path';
 import { Client, ROOT, hasChrome, sleep, problemsOf, startRealServer } from '../e2e/client.mjs';
 import { packPlugin } from '../../server/plugins/pack.js';
 
-const ENABLED = process.env.SP_E2E === '1' && hasChrome();
+// Opt-in lane (SP_NATIVE_E2E=1): a real multi-browser native room (3–8 min a file, delegation + CPU budgets).
+const ENABLED = process.env.SP_NATIVE_E2E === '1' && hasChrome();
 
 function nativePlugin(t) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-native-bench-'));

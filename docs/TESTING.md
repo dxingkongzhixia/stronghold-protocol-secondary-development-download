@@ -38,6 +38,7 @@
 | 浏览器 smoke | `npm run test:browser:smoke`（`tools/browser-smoke.mjs`：协议启动 + 快捷键/设置入口 + 异形屏适配 + 标题页/安装 + 一局 mock 交互；约 2.5 分钟；**不需要素材**，Chrome 自动找/`CHROME_PATH`） |
 | 浏览器用例开局 | `?e2e=1`（关掉入口动画与首个美术弹窗）+ `test/helpers/appBoot.mjs`（`openApp` / `createRoom` / `openSettings`）；端口用 `test/helpers/browserServer.mjs` 的 `startBrowserServer()` |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（10 分钟硬停；打印 CPU 进程表与最后输出，exit 3 需人工看） |
+| 素材 e2e（本地/夜间） | `npm run test:e2e:assets`（standin / spectator / teammate-loadout / leftovers / watch-bonds，需 `public/assets` 与 Chrome；`-- --native` 加 native-room 三条，25 分钟/文件硬停） |
 | 浏览器渲染 | `RENDER_E2E=1 node --test test/render/*.browser.test.js`（需 Chrome + `public/assets`） |
 | 联机 E2E | `SP_E2E=1 node --test "test/e2e/**"`（需浏览器与素材） |
 | Agent 席位 E2E | `SP_AGENT_E2E=1 node --test test/e2e/agent-seat.e2e.mjs`（真实 Match，无需浏览器；见 [`AGENT-SEATS.md`](AGENT-SEATS.md) §6.1） |
