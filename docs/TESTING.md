@@ -87,7 +87,7 @@ lobby / 心跳 / 限流类用例会超时（整轮反而更慢）。单跑想更
 | Chrome 拒绝端口（`ERR_UNSAFE_PORT`） | `startServer({ port: 0 })` 偶尔分配到 5060/5061、6000、6665–6669 等 Chrome 黑名单端口，页面根本不加载 | 浏览器用例用 `test/helpers/browserServer.mjs` 的 `startBrowserServer()`（撞上就换一个端口） |
 | 测试机器 CPU 很高（一个 Chrome 70%+） | e2e 曾强制 `--use-angle=swiftshader`（软件 WebGL）：实测 51 CPU 秒/10 秒，硬件 D3D11 只有 11 | `test/e2e/client.mjs` 现在只在 `CI=1` 或 `SP_GL=swiftshader` 时用 SwiftShader；本机走硬件。内存无泄漏（JS heap 60 秒稳定在 ~110–140 MB，节点数不变） |
 | 浏览器用例被全屏层挡点击 | 入口动画（`ui/entryFilm.js`）和首个 `美术资源` 弹窗（`ui/assetMode.js`）盖住整页，点击落在遮罩上 | 页面 URL 加 `?e2e=1`（`public/js/e2eMode.js` 关掉这两层）；开局用 `test/helpers/appBoot.mjs` 的 `openApp` / `createRoom` / `openSettings`，不要再逐文件写 seed |
-| 测试“还在跑”其实已挂起 | 单测死循环，或测试跑完后泄漏的 server/browser 让进程不退（实测一次 55 分钟、Chrome 烧 66 分钟 CPU） | `npm test` / smoke 已带 `--test-timeout=600000`（>10 分钟的单测直接红并报名字）与 `--test-force-exit`（跑完强制退出）；整轮仍卡死：`npm run test:guard -- -- node --test …`（10 分钟硬停 + 进程表 + 最后输出，exit 3） |
+| 测试“还在跑”其实已挂起 | 单测死循环，或测试跑完后泄漏的 server/browser 让进程不退（实测一次 55 分钟、Chrome 烧 66 分钟 CPU） | `npm test` 带 `--test-timeout=600000`（>10 分钟的单测直接红并报名字）；浏览器 smoke/脚本另带 `--test-force-exit`（**注意**：它会把未完成的 Promise 记为失败，`test/ui/morph-bonds.test.js` 就是因此报错，所以全量套件不用它）；整轮仍卡死：`npm run test:guard -- -- node --test …`（10 分钟硬停 + 进程表 + 最后输出，exit 3） |
 | 房间里配装打开的是卡组视图 | 0.2.x 起 `loadout.view` 默认 `deck`（`.lo--deck`），旧用例找列表 `.lo-card` | 测试 seed `localStorage['sp.pref.loadout.view'] = 'list'`（`Client`/`appBoot` 已默认写入） |
 | CI 上 `test/**` 大面积 skip | CI 明确 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §6 |
 

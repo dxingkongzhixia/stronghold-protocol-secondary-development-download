@@ -17,9 +17,9 @@ const extra = process.argv.slice(2).filter((a) => a !== '--with-golden');
 const args = [
   '--test', `--test-concurrency=${concurrency}`,
   // A single test over ten minutes is a hang until proven otherwise: fail it with its name instead of waiting forever.
-  // --test-force-exit is the backstop for the other hang shape: tests done, but a leaked server/browser keeps the
-  // process alive (seen with the browser E2E suites: one Chrome spinning, node idle at 2 s CPU for ~55 min).
-  '--test-timeout=600000', '--test-force-exit',
+  // (No --test-force-exit here: it turns a test's still-pending promise into a failure — test/ui/morph-bonds.test.js.
+  // The browser runners keep it; a whole run that never ends is caught by tools/hang-guard.mjs.)
+  '--test-timeout=600000',
   ...extra,
   'test/**/*.test.js', 'test/e2e/coop.e2e.mjs', 'plugins/_template/**/*.test.js',
 ];
