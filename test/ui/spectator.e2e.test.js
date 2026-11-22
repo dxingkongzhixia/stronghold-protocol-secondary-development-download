@@ -51,8 +51,14 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       // the hub's 加入同盟 tile opens the key dialog; 观战 sits beside 加入同盟
       await spec.click('.hub-tile', '加入同盟');
       await spec.page.waitForSelector('.hub-dialog .join-row input', { timeout: 10000 });
-      await spec.click('.hub-dialog .join-row input');
-      await spec.page.keyboard.type(room.code);
+      // the field is controlled: a synthetic input through the native setter is deterministic where keyboard typing raced
+      await spec.page.evaluate((code) => {
+        const el = document.querySelector('.hub-dialog .join-row input');
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        set.call(el, code);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }, room.code);
+      await spec.page.waitForFunction(() => [...document.querySelectorAll('.hub-dialog .join-row button')].some((b) => /观战/.test(b.textContent) && !b.disabled), { timeout: 5000 });
       await spec.click('.hub-dialog .join-row button', '观战');
       // the spectator's room line: the hub-era room bar keeps 观战中 in its status line (the old .specbar__who is gone)
       await spec.page.waitForSelector('.room-screen .room-bar__status .t-lo', { timeout: 15000 });
@@ -72,11 +78,12 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       extra = await TestClient.connect(`ws://127.0.0.1:${srv.port}/ws`);
       await extra.hello('华法琳');
       assert.equal((await extra.request({ t: 'room.spectate', code: room.code })).t, 'ok');
-      await host.page.waitForFunction(() => document.querySelectorAll('.specbar__who').length === 2, { timeout: 8000 });
+      await host.page.waitForFunction(() => document.querySelectorAll('.specdock__row').length === 2, { timeout: 8000 });
       await host.shot('room-host-specbar');
-      await host.click('.specbar__who button[aria-label*="华法琳"]');
+      await host.page.evaluate(() => { const d = document.querySelector('.specdock'); if (d) d.open = true; }); // the 观战席 dock is a dropdown
+      await host.click('.specdock__row button[aria-label*="华法琳"]');
       assert.equal((await extra.waitFor('room.closed', () => true, 5000)).reason, 'kicked');
-      await host.page.waitForFunction(() => document.querySelectorAll('.specbar__who').length === 1, { timeout: 8000 });
+      await host.page.waitForFunction(() => document.querySelectorAll('.specdock__row').length === 1, { timeout: 8000 });
 
       // the match: a spectator is no player to wait for
       await host.click('.room-bar__right button', '开始模拟', { timeout: 20000 });
