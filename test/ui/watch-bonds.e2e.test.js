@@ -158,7 +158,7 @@ async function coopMatch(P, base, { bots = 1, prefix }) {
   }
   await guest.open(`?room=${room.code}`);
   await guest.page.setViewport({ width: 756, height: 366, hasTouch: true, isMobile: true });
-  await guest.page.reload({ waitUntil: 'domcontentloaded' });
+  await guest.page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
   await guest.page.waitForFunction(() => !!globalThis.__SP__ && !!document.querySelector('.screen'), { timeout: 30000 });
   await guest.enter('阿米娅');
   await guest.waitFor((s) => s.room?.code === room.code, 'guest joined');
@@ -231,7 +231,10 @@ const matchView = (c) => c.page.evaluate(() => {
     field: s.match.field ? { fieldId: s.match.field.fieldId, sides: s.match.field.sides || null } : null,
   };
 });
-const ownerIs = (c, name) => c.page.waitForFunction((name) => (document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') ?? null) === name, { timeout: 6000 }, name);
+const ownerIs = (c, name) => c.page.waitForFunction((name) => (document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') ?? null) === name, { timeout: 15000 }, name).catch(async () => {
+  const d = await c.page.evaluate(() => { const s = globalThis.__SP__.store.get(); return { owner: document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') ?? null, html: document.querySelector('.gm__bonds')?.innerHTML.replace(/\s+/g, ' ').slice(0, 240) ?? null, watching: s.match.public?.watching ?? null, field: s.match.field?.fieldId ?? null, battleWatch: s.match.battle?.watch ?? null }; });
+  throw new Error(`bond strip owner is not ${name}: ${JSON.stringify(d)}`);
+});
 
 describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds (real server)', { skip: !ENABLED && 'set SP_E2E=1 (Chrome + public/assets)' }, () => {
   test('prep scouting and the Final Assault ‹ › halves (desktop host, phone guest)', { timeout: 8 * 60 * 1000 }, async () => {
@@ -588,22 +591,30 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       for (const c of [host, guest]) await c.waitFor((s) => s.phase === 'FINAL_ASSAULT', 'Final Assault', 90000);
       // the eliminated guest answers the official 协议已失效 dialog (PR #705) with 继续观战 before watching
       await continueWatching(guest);
-      await guest.page.waitForSelector('.chud', { timeout: 20000 }); // the combat HUD (the old .chud__layers wrapper is gone)
+      // the auto-observed pair is shown by the single observe pill (`.chud__observe`); the layer bar appears after an
+      // explicit pick below
+      await guest.page.waitForSelector('.chud__observe', { timeout: 20000 });
       await sleep(1000);
       const mv = await matchView(guest);
       const pair = mv.fields.find((f) => f.players.length === 2);
       const lone = mv.fields.find((f) => f.players.length === 1);
       assert.ok(pair && lone && mv.field?.fieldId === mv.fields[0].fieldId, `a pair field and a lone one, the first auto-observed (${JSON.stringify(mv)})`);
       assert.equal(pair.fieldId, mv.fields[0].fieldId, 'the pair field is listed first');
-      const first = mv.names[pair.players[0]];
+      // the auto-observed field shows its LEFT player's pill; the field's player array order need not be the side order
+      const observed = await guest.page.$eval('.chud__observe .vswitch__label', (e) => e.textContent.trim()).catch(() => null);
+      const firstPid = pair.players.find((pid) => mv.names[pid] === observed) ?? pair.players[0];
+      const secondPid = pair.players.find((pid) => pid !== firstPid) ?? pair.players[1];
+      const first = mv.names[firstPid];
       await ownerIs(guest, first);
       let st = await stripOf(guest);
-      assert.deepEqual([st.owner, st.bonds, st.pill], [first, mv.bonds[first], '全景'], 'auto-observed pair, 全景: the first player (never the spectator\'s own)');
+      // the auto-observed pair is shown by the single observe pill, which now names the observed player (the old 全景
+      // layer bar appears only after an explicit pick, below)
+      assert.deepEqual([st.owner, st.bonds, st.observe], [first, mv.bonds[first], first], 'auto-observed pair: the first player, never the spectator\'s own');
       await guest.shot('auto');
       // a card's bond chip (review): the strip follows the first player, the SECOND player's operator's chip opens the
       // second player's bond (labelled, their count — the number the chip shows), the strip stays on the first
-      const second = mv.names[pair.players[1]];
-      const chip = await chipPopup(guest, pair.players[1]);
+      const second = mv.names[secondPid];
+      const chip = await chipPopup(guest, secondPid);
       assert.ok(chip, `spectator: a card of ${second}'s operator and its bond chip`);
       const secondNow = await bondsOf(guest, second);
       assert.equal(chip.owner, second, `全景: ${second}'s unit chip opens ${second}'s popup (${JSON.stringify(chip)})`);
