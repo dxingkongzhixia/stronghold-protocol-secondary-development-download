@@ -122,6 +122,21 @@ export class FxSim {
     // dependency in the fallback)
     const local = fxLocalFor(spec.local || { official: true }, ex, this._fxLocalOp(ex, at), kind);
     if (local && this._fxLocal(local, at, r, col, dur)) return;
+    const fx = { spec, ex, kind, x, y, at, col, r, dur, cam, p, s, ts };
+    switch (spec.a) {
+      case 'blast': case 'shell': case 'zone': case 'wall': case 'telegraph': case 'chill':
+        return this._fxArea(fx);
+      case 'heal': case 'healAoe': case 'sp': case 'shield': case 'shatter': case 'summon':
+      case 'vanish': case 'blink': case 'move': case 'qi': case 'wave': case 'mark': case 'reticle':
+      case 'buff': case 'lift': case 'sleep':
+        return this._fxSupport(fx);
+      default:
+        return this._fxCombat(fx);
+    }
+  }
+
+  /** Area / ground-field kinds: blast, shell, zone, wall, telegraph, chill. */
+  _fxArea({ spec, ex, kind, x, y, at, col, r, dur, ts }) {
     switch (spec.a) {
       case 'blast': {
         if (r >= 12) { this.flashScreen(col, 0.5); break; }
@@ -159,6 +174,12 @@ export class FxSim {
       case 'chill':
         if (ex.id == null) { this.flashScreen(col, 0.45, 1); this.snowfall(col, true); } else { this.flashScreen(col, 0.35, 0.8); this.snowfall(col); }
         break;
+    }
+  }
+
+  /** Unit-centred support kinds: heal, healAoe, sp, shield, shatter, summon, vanish, blink, move, qi, wave, mark, buff, lift, sleep. */
+  _fxSupport({ spec, ex, kind, at, col, r, cam, p, s }) {
+    switch (spec.a) {
       case 'heal': this.heal(at.v || { x: at.x, y: at.y, z: at.z }, 0); break;
       case 'healAoe': {
         this.ring(at.x, at.y, at.z, 0.2, r, col, 0.6);
@@ -301,6 +322,12 @@ export class FxSim {
         for (let i = 0; i < 3; i++) this.particle('st_sleep', q.x + i * q.s * 0.12, q.y - i * q.s * 0.12, { add: false, vy: -q.s * 0.5, vx: q.s * 0.15, life: 0.9 + i * 0.2, s0: q.s / 32 * 0.22, s1: q.s / 32 * 0.32, a0: 1, a1: 0, fadeIn: 0.1 * i });
         break;
       }
+    }
+  }
+
+  /** Combat / presentation kinds (crit … element) and the generic sparkle. */
+  _fxCombat({ spec, ex, x, y, at, col, r, dur, p, s }) {
+    switch (spec.a) {
       case 'crit': {
         this.particle('spark', p.x, p.y, { tint: col, life: 0.28, s0: s / 64 * 1.3, s1: s / 64 * 0.2, a0: 1, a1: 0, rot: Math.random() * Math.PI });
         this.particle('glow', p.x, p.y, { tint: 0xffffff, life: 0.18, s0: s / 128 * 0.9, s1: s / 128 * 1.4, a0: 0.9, a1: 0 });
@@ -380,4 +407,5 @@ export class FxSim {
       }
     }
   }
+
 }
