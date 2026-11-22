@@ -388,372 +388,15 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
   const extraOps = {};
   for (const [id, x] of Object.entries(extraOperators || {})) if (/^char_\d+_[a-z0-9]+$/i.test(id) && !known[id]) extraOps[id] = patternOperator(id, x);
   const operators = { ...known, ...extraOps };
-  const charIds = Object.keys(operators).sort();
-  for (const id of charIds) {
-    const o = operators[id];
-    // DESIGN §16 operator loadouts: any skill of the character can be equipped — the icons, skill SFX and Spine skill
-    // clips of every skill index (the pool's primary index first, as before)
-    const idx0 = skillIdx.get(id) || [0];
-    const idx = [...idx0, ...(o.skills || []).map((k) => k.index).filter((i) => Number.isInteger(i) && i >= 0 && !idx0.includes(i)).sort((a, b) => a - b)];
-    const c = {};
-    c.avatar = leaf(alt(`char/avatar/${id}.png`, o.avatar?.e0e1?.url, o.avatar?.e0e1?.bytes));
-    if (o.avatar?.e2?.url) c.avatarE2 = leaf(alt(`char/avatar/${id}_2.png`, o.avatar.e2.url, o.avatar.e2.bytes));
-    c.portrait = leaf(alt(`char/portrait/${id}_1.png`, o.portrait?.e0e1?.url, o.portrait?.e0e1?.bytes));
-    if (o.portrait?.e2?.url) c.portraitE2 = leaf(alt(`char/portrait/${id}_2.png`, o.portrait.e2.url, o.portrait.e2.bytes));
-    // The seat card's default 立绘 (owner 2026-10-24): the operator's E0/E1 full-body official art (the E2 art often
-    // carries a huge background effect, which crops badly into a card; `_2` is the fallback when `_1` is absent). The
-    // file is stored as a head-and-torso 3:5 WebP crop (`tools/illust.mjs` / the fetch-assets post-step); the plan's
-    // URL is the PNG source. Operators the dump lacks simply have no leaf here and the card falls back to
-    // portraitE2 / portrait. Skins keep their own `illust` in the core skin catalogue (skins/catalogue.json), not here.
-    c.illust = leaf(alt(`char/illust/${id}.webp`, [
-      `${RAW.aceship}characters/${id}_1.png`,
-      `${RAW.aceship}characters/${id}_2.png`,
-    ]));
-    c.spine = {};
-    const front = fexliModel(`op:${id}:front`, 'op', `spine/op/${id}/front/`, o.battleSpine?.front, idx);
-    if (front) c.spine.front = front; else notes.push(`${id}: no Front battle Spine in research data`);
-    const back = fexliModel(`op:${id}:back`, 'op', `spine/op/${id}/back/`, o.battleSpine?.back, idx);
-    if (back) c.spine.back = back;
-    chars[id] = c;
-    // skill icons (+ skill SFX) of every skill index; normal-mode attack / impact sounds only (a ranged operator's own
-    // projectile banks projectile_chr_<name> as fallbacks — user playtest #4 item 6, audio.mjs pickUnitSfx)
-    const short = id.replace(/^char_\d+_/, '');
-    const sfx = pickUnitSfx(audio.unitBanks.get(id), { operator: true, projectile: {
-      born: audio.bank(`battle.ON_PROJECTILE_BORN.projectile_chr_${short}`), hit: audio.bank(`battle.ON_PROJECTILE_HIT.projectile_chr_${short}`) } });
-    for (const [role, path] of Object.entries(UNIT_SFX_OVERRIDES[id] || {})) if (!sfx[role]) sfx[role] = [path];
-    const { roles: u, mix } = unitSounds(audio, sfx, poolRef);
-    const skillSfx = {};
-    // Per-skill ATTACK / IMPACT sound (audio.mjs pickModeAttacks / pickModeHits): a skill mode has its own swing and its
-    // own hit sound, and neither may play as the unit's normal attack / impact (银灰, 纯烬艾雅法拉). An operator whose
-    // every attack belongs to a skill mode has no normal bank at all (司霆惊蛰 — 解放者, she only attacks while a skill
-    // runs — the report 「三技能攻击没有音效」); 赤刃明霄陈's S3 slashes swing `p_atk_hljdswd_s` and land `p_imp_hljdswd_s`
-    // where her normal attack uses the `_n` files (the report 「斩击音效应该和普通攻击不一样」). The mode letter of a skill
-    // index is read from that skill's own activation sound (`p_skill_lzxqlkl_s` → s = 技能3); without one (most operators
-    // carry no activation sound) we infer 技能1 / 2 / 3 = d / h / s ([ASSUMED], below). The client plays
-    // them while that skill is active (public/js/audio.js unit()).
-    const modeAttacks = pickModeAttacks(audio.unitBanks.get(id));
-    const modeHits = pickModeHits(audio.unitBanks.get(id));
-    const attacks = {};
-    const hits = {};
-    const attackMix = {}, hitMix = {};
-    const attackPools = {}, hitPools = {};
-    for (const i of idx) {
-      const s = (o.skills || []).find((k) => k.index === i);
-      if (!s) { notes.push(`${id}: skill index ${i} missing in research data`); continue; }
-      const iconId = s.iconId || s.skillId;
-      if (s.icon?.url && !skills[iconId]) skills[iconId] = leaf(alt(`skill/${safeName(iconId)}.png`, s.icon.url, s.icon.bytes));
-      if (s.skillId) skillsById[s.skillId] = iconId;
-      // Skill SFX. `ON_SKILL_START.<skillId>` is the manual cast stinger; auto skills carry their start sound in
-      // `ON_ABILITY_START.<skillId>` instead (冻河's S1 / S2 have no ON_SKILL_START bank at all). Keep both as
-      // alternatives — the manifest build keeps the first one whose file exists (the local client may lack a
-      // `battle/b_char/*` stinger the web mirror has).
-      const ss = audio.skillBanks.get(s.skillId)?.get('ON_SKILL_START') || [];
-      const abilityStart = audio.bank(`battle.ON_ABILITY_START.${s.skillId}`);
-      const cast = [...ss, ...abilityStart.filter((p) => !ss.includes(p))];
-      if (cast.length) skillSfx[String(i)] = soundLeaf(cast);
-      // [ASSUMED] Without a named activation mode, infer d/h/s from slot 1/2/3; see DESIGN §28.17.
-      const letter = skillModeLetter(ss?.[0]) ?? skillModeLetter(cast[0]) ?? SLOT_MODE_LETTER[i];
-      // The skill's own swing / impact banks are named by SKILL ID (`ON_ABILITY_ON.skchr_tocka_1` …), not by the
-      // unit's `attack` ability; prefer them, then the mode letter, then the skill's own projectile impact
-      // (`ON_PROJECTILE_HIT.projectile_<name>_s<slot>`).
-      const ownSwing = audio.bank(`battle.ON_ABILITY_ON.${s.skillId}`);
-      const swing = ownSwing.length ? ownSwing : (letter && modeAttacks[letter]) || null;
-      if (swing) {
-        attacks[String(i)] = soundLeaf(swing);
-        const m = audio.mixOf?.(swing);
-        if (m) attackMix[String(i)] = m;
-        const pool = poolRef(swing);
-        if (pool) attackPools[String(i)] = pool;
-      }
-      const ownHit = audio.bank(`battle.ON_ABILITY_HIT.${s.skillId}`);
-      const projName = [`projectile_chr_${short}_s${i + 1}`, `projectile_${short}_s${i + 1}`]
-        .map((n) => audio.bank(`battle.ON_PROJECTILE_HIT.${n}`)).find((p) => p.length) || [];
-      const hit = ownHit.length ? ownHit : (letter && modeHits[letter]) || projName;
-      if (hit.length) {
-        hits[String(i)] = soundLeaf(hit);
-        const m = audio.mixOf?.(hit);
-        if (m) hitMix[String(i)] = m;
-        const pool = poolRef(hit);
-        if (pool) hitPools[String(i)] = pool;
-      }
-    }
-    const primarySkill = skillSfx[String(idx[0])];
-    if (primarySkill) u.skill = primarySkill;
-    if (Object.keys(skillSfx).length) u.skills = skillSfx;
-    if (Object.keys(attacks).length) u.attacks = attacks;
-    if (Object.keys(hits).length) u.hits = hits;
-    if (Object.keys(attackMix).length) u.attackMix = attackMix;
-    if (Object.keys(hitMix).length) u.hitMix = hitMix;
-    if (Object.keys(attackPools).length) u.attackPools = attackPools;
-    if (Object.keys(hitPools).length) u.hitPools = hitPools;
-    if (mix) u.mix = mix;
-    if (Object.keys(u).length) unitsSfx[id] = u;
-  }
-
-  // --- tokens --------------------------------------------------------------
-  const chessById = new Map((ops03?.chess || []).map((c) => [c.chessId, c]));
-  const tokens = {};
-  const tokenIds = new Set(Object.keys(assets07?.tokens || {}));
-  for (const id of extraTokenIds) if (typeof id === 'string' && /^token_\d+_[a-z0-9_]+$/i.test(id)) tokenIds.add(id);
-  for (const id of [...tokenIds].sort()) {
-    // Tokens unknown to research 07: default avatar/Spine locations (misses are tolerated).
-    const t = assets07?.tokens?.[id] ?? {
-      avatar: { url: `${RAW.yuanyan}avatar/${id}.png` },
-      battleSpineDefault: null,
-      battleSpineSkinVariantsOnly: [id],
-    };
-    const usedBy = ops03?.tokensUsedByPool?.[id]?.usedByChess || [];
-    const ownerChess = usedBy.map((cid) => chessById.get(cid)).find(Boolean);
-    const entry = { owner: ownerChess?.charId || ownerChess?.backup?.charId || null };
-    entry.avatar = t.avatar?.url ? leaf(alt(`token/avatar/${id}.png`, t.avatar.url, t.avatar.bytes)) : null;
-    let model = null;
-    if (t.battleSpineDefault) {
-      model = fexliModel(`token:${id}`, 'token', `spine/token/${id}/`, t.battleSpineDefault, [0]);
-    } else if (Array.isArray(t.battleSpineSkinVariantsOnly) && t.battleSpineSkinVariantsOnly.length) {
-      // Skin-variant models live in a `Spine/` folder, or `Front/` for directional ones.
-      const v = t.battleSpineSkinVariantsOnly[0];
-      const bases = ['Spine', 'Front'].map((f) => `${RAW.fexli}spine/${encodeURIComponent(id)}/${encodeURIComponent(v)}/${f}/${encodeURIComponent(v)}`);
-      model = fexliModel(`token:${id}`, 'token', `spine/token/${id}/`, {
-        skel: bases.map((b) => b + '.skel'), atlas: bases.map((b) => b + '.atlas'), png: bases.map((b) => b + '.png'),
-      }, [0]);
-      if (model) entry.spineVariant = v;
-    }
-    entry.spine = model;
-    // the official model from the local client, drawn instead of the avatar (or of `spine`) when extracted (optional)
-    const loc = localTokenSpines && Object.hasOwn(localTokenSpines, id) ? localTokenSpines[id] : null;
-    if (loc && typeof loc === 'object') {
-      entry.spineLocal = literal({ group: `spine/token/${id}`, ...loc });
-      notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);
-    }
-    tokens[id] = entry;
-    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(audio.unitBanks.get(id)), poolRef);
-    if (mix) u.mix = mix;
-    if (Object.keys(u).length) unitsSfx[id] = u;
-  }
-
-  // --- enemies -------------------------------------------------------------
-  const handbookOf = new Map();
-  for (const b of Object.values(enemies05?.bosses || {})) if (b?.enemyId && b.handbookId && b.handbookId !== b.enemyId) handbookOf.set(b.enemyId, b.handbookId);
-  for (const [eid, hb] of Object.entries(extraHandbook || {})) if (typeof hb === 'string' && hb !== eid && !handbookOf.has(eid)) handbookOf.set(eid, hb);
-  const mdData = modelsData?.data || {};
-  const enemyDir = modelsData?.storageDirectory?.Enemy || 'models_enemies';
-  const pick = (v) => (Array.isArray(v) ? (v.find((x) => typeof x === 'string' && !x.includes('$')) ?? v[0]) : v);
-  const arkModel = (eid) => {
-    const key = eid.replace(/^enemy_/, '');
-    const al = mdData[key]?.assetList;
-    const skel = pick(al?.['.skel']); const atlas = pick(al?.['.atlas']); const png = pick(al?.['.png']);
-    if (![skel, atlas, png].every((x) => typeof x === 'string' && x)) return null;
-    const base = `${RAW.arkModels}${enemyDir}/${encodeURIComponent(key)}/`;
-    const rec07 = assets07?.enemies?.[eid]?.battleSpine;
-    const dir = `spine/enemy/${eid}/`;
-    const stem = skelStem(skel);
-    const mk = (file, r, rel) => alt(rel ?? dir + safeName(file), base + encodeURIComponent(file), bytesOf(r, base + encodeURIComponent(file)));
-    return addModel(`enemy:${eid}`, {
-      kind: 'enemy', dir, pma: true, skillIndices: [0], baseUrl: base,
-      skel: mk(skel, rec07?.skel, `${dir}${stem}.skel`),
-      atlas: { ...mk(atlas, rec07?.atlas, `${dir}${stem}.atlas`), mutable: true },
-      pngs: [mk(png, rec07?.png)],
-    });
-  };
-  const baseIdOf = (eid) => { const m = /^(enemy_\d+_[a-z0-9]+?)_\d+$/i.exec(eid); return m ? m[1] : null; };
-  const enemyIdSet = new Set(collectEnemyIds({ assets07, enemies05, maps05, ops03 }));
-  for (const id of extraEnemyIds) if (typeof id === 'string' && /^(?:enemy|trap)_\d+_[a-z0-9_]+$/i.test(id)) enemyIdSet.add(id);
-  // Boss handbook ids (their own icon/model ids) are addressable too.
-  for (const hb of handbookOf.values()) if (/^enemy_\d+_[a-z0-9_]+$/i.test(hb)) enemyIdSet.add(hb);
-  const enemyIds = [...enemyIdSet].sort();
-  const enemies = {};
-  /** Units without a handbook/enemy record whose only UI art is one file (see INLINE_DEF_UNITS in fetch-assets.mjs). */
-  const LITERAL_ENEMY_ICONS = { trap_258_rgcssm: '/assets/enemy/icon/trap_258_rgcssm.png' };
-  for (const id of enemyIds) {
-    const e = {};
-    const icon07 = assets07?.enemies?.[id]?.icon;
-    const iconAlts = [alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${id}.png`, bytesOf(icon07, `${RAW.yuanyan}enemy/${id}.png`))];
-    for (const other of [handbookOf.get(id), baseIdOf(id)]) if (other) iconAlts.push(alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${other}.png`));
-    e.icon = LITERAL_ENEMY_ICONS[id] ? literal(LITERAL_ENEMY_ICONS[id]) : leaf(iconAlts);
-    // Spine: own model, else alias chain (research 07 §5.6).
-    let spine = arkModel(id);
-    if (!spine) {
-      const seen = new Set([id]);
-      const queue = [ENEMY_SPINE_ALIAS[id], baseIdOf(id), handbookOf.get(id)].filter(Boolean);
-      while (!spine && queue.length) {
-        const cand = queue.shift();
-        if (seen.has(cand)) continue;
-        seen.add(cand);
-        spine = arkModel(cand);
-        if (spine) e.spineAliasOf = cand;
-        else queue.push(...[ENEMY_SPINE_ALIAS[cand], baseIdOf(cand), handbookOf.get(cand)].filter(Boolean));
-      }
-      if (!spine) notes.push(`${id}: no enemy Spine upstream (client draws the icon, if any, or a glyph)`);
-      else notes.push(`${id}: Spine aliased to ${e.spineAliasOf}`);
-    }
-    e.spine = spine;
-    // the official model from the local client, drawn instead of `spine` when the extraction is installed (optional)
-    const loc = localEnemySpines && Object.hasOwn(localEnemySpines, id) ? localEnemySpines[id] : null;
-    if (loc && typeof loc === 'object') {
-      e.spineLocal = literal({ group: `spine/enemy/${id}`, ...loc });
-      notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);
-    }
-    enemies[id] = e;
-    let banks = audio.unitBanks.get(id);
-    for (const other of [handbookOf.get(id), e.spineAliasOf, baseIdOf(id)]) {
-      if (banks?.size) break;
-      if (other) banks = audio.unitBanks.get(other);
-    }
-    const { roles: u, mix } = unitSounds(audio, pickUnitSfx(banks), poolRef);
-    if (mix) u.mix = mix;
-    if (Object.keys(u).length) unitsSfx[id] = u;
-  }
-
-  // --- bonds / items / bands -------------------------------------------------
-  const bonds = {};
-  for (const [bondId, b] of Object.entries(assets07?.bonds || {})) {
-    bonds[bondId] = leaf(alt(`bond/${bondId}.png`, b.icon?.url, b.icon?.bytes), b.fallbackCampLogo ? alt(`bond/${bondId}.png`, b.fallbackCampLogo) : null);
-  }
-  const items = {};
-  for (const [trapId, it] of Object.entries(assets07?.items || {})) items[trapId] = leaf(alt(`item/${trapId}.png`, it.icon?.url, it.icon?.bytes));
-  const bands = {};
-  for (const [bandId, b] of Object.entries(assets07?.bands || {})) bands[bandId] = leaf(alt(`band/${bandId}.png`, b.icon?.url, b.icon?.bytes));
-
-  // --- professions ----------------------------------------------------------
-  const prof = { icon: {}, large: {}, battlecard: {}, sub: {} };
-  for (const p of PROFESSIONS) {
-    const i = assets07?.arts?.professionIcon?.[p];
-    if (i) prof.icon[p] = leaf(alt(`prof/icon_${p}.png`, i));
-    const l = assets07?.arts?.professionIconLargeWhite?.[p];
-    if (l) prof.large[p] = leaf(alt(`prof/large_${p}.png`, l));
-  }
-  for (const p of [...PROFESSIONS, 'token']) {
-    prof.battlecard[p] = leaf(alt(`prof/battlecard_${p}.png`, joinUrl(RAW.aa2, `arts/ui/[uc]battlecommon/ui_battle_new/battlecard/icon_profession_${p}.png`)));
-  }
-  for (const o of Object.values(operators)) {
-    const sub = o.subProfessionId;
-    if (typeof sub === 'string' && sub && !prof.sub[sub] && o.subProfessionIcon) prof.sub[sub] = leaf(alt(`prof/sub/${safeName(sub)}.png`, o.subProfessionIcon));
-  }
-
-  // --- UI ------------------------------------------------------------------
-  const ui = {};
-  const addUi = (group, key, url) => {
-    const k = safeName(key);
-    const name = `${group}/${k}`;
-    if (!ui[name] && url) ui[name] = leaf(alt(`ui/${group}/${k}.png`, url));
-  };
-  for (const [group, entries] of Object.entries(assets07?.autochessUi || {})) {
-    for (const [key, url] of Object.entries(entries || {})) addUi(group, key, url);
-  }
-  const nations = new Set(Object.values(operators).map((o) => o.nationId).filter(Boolean));
-  const logos = new Set(['logo_rhodes', ...[...nations].map((n) => `logo_${n}`)]);
-  for (const b of Object.values(assets07?.bonds || {})) if (b.fallbackCampLogo) logos.add(urlBase(b.fallbackCampLogo).replace(/\.png$/i, ''));
-  for (const [src, group] of Object.entries(ARTS_GROUPS)) {
-    for (const [key, url] of Object.entries(assets07?.arts?.[src] || {})) {
-      if (src === 'campLogo' && !logos.has(key)) continue;
-      if (src === 'loadingIllust' && !LOADING_USED.has(key)) continue;
-      addUi(group, key, url);
-    }
-  }
-  for (const [group, key, path] of UI_EXTRAS) addUi(group, key, joinUrl(RAW.aa2, path));
-
-  // --- audio ----------------------------------------------------------------
-  const bgmLeaf = (bankName) => {
-    const b = audio.bgm(bankName);
-    if (!b?.loop) { notes.push(`BGM bank ${bankName} not found`); return null; }
-    const out = { loop: soundLeaf([b.loop], 'bgm', 1) };
-    if (b.intro) out.intro = soundLeaf([b.intro], 'bgm', 1);
-    return out;
-  };
-  // BGM files are flattened to audio/bgm/<basename>.
-  const flatBgm = (node) => {
-    if (!node) return node;
-    for (const k of Object.keys(node)) {
-      const l = node[k];
-      if (l?.alts) for (const a of l.alts) a.rel = 'audio/bgm/' + safeName(a.rel.split('/').pop());
-    }
-    return node;
-  };
-  // 联防 BGM: the official 联防 levels (`escaped_single` / `escaped_multi`) declare `bgmEvent = corrosion` — a
-  // 卡西米尔 act13d5d0 battle track — so the rescue phase does NOT reuse the 作战's track. Kept out of `bgm` when the
-  // bank is missing (the client then falls back to `bgm.combat`; public/js/audio.js resolveBgm), so the manifest stays
-  // valid for an older audio_data.
-  const unite = flatBgm(bgmLeaf('battle.ON_GAME_READY.corrosion'));
-  // 开战 BGM: the two official battle tracks of the mode's own 卡西米尔 act (music_act13side_1 骑士之日 /
-  // music_act13side_2 无畏者, 塞壬唱片). The client does not draw them: the round decides (audio.js combatTrackFor —
-  // 无畏者 for rounds 1–7, 骑士之日 from round 8 on), so index 0 must stay `bat_kazimierz2_1` and index 1
-  // `bat_kazimierz2_2` (test/ui/audio.test.js pins both the order and the round table).
-  // Kept out of `bgm` below when the index has neither bank, so the manifest stays valid for an older audio_data.
-  const combatAlts = ['battle.ON_GAME_READY.bat_kazimierz2_1', 'battle.ON_GAME_READY.bat_kazimierz2_2']
-    .map((n) => flatBgm(bgmLeaf(n))).filter(Boolean);
-  const bgm = {
-    lobby: flatBgm(bgmLeaf('sys.ON_ACTIVITY_LOADED.act2autochess')),
-    prep: flatBgm(bgmLeaf('battle.ON_GAME_READY.act1autochess_shop')),
-    combat: flatBgm(bgmLeaf('battle.ON_GAME_READY.act1autochess_shop')),
-    boss: flatBgm(bgmLeaf('battle.ON_GAME_READY.rglk1phantomcastle')),
-    ...(combatAlts.length ? { combatAlts } : {}),
-    ...(unite ? { unite } : {}),
-  };
-  // 主界面音乐 (the Hub's picker, tools/assets/lobby-music.mjs): the official 音乐鉴赏 `musics[]` entries, one intro /
-  // loop pair each. The id is the catalogue id, so the client's saved pick survives a manifest rebuild; a track whose
-  // bank is missing from this audio dump is skipped and the client falls back to `bgm.lobby`.
-  const lobbyMusic = {};
-  for (const item of LOBBY_MUSIC) {
-    const m = typeof audio.music === 'function' ? audio.music(item.id) : null;
-    if (!m) { notes.push(`lobby music ${item.id} not in audio_data (skipped)`); continue; }
-    const entry = { name: m.name, group: item.group };
-    if (m.intro) entry.intro = leaf(alt(`audio/music/${item.id}_intro.mp3`, joinUrl(RAW.aa2voice, m.intro)));
-    entry.loop = leaf(alt(`audio/music/${item.id}_loop.mp3`, joinUrl(RAW.aa2voice, m.loop)));
-    lobbyMusic[item.id] = entry;
-  }
-  const bossBgm = {};
-  for (const lv of Object.values(maps05?.roundLevels || {})) {
-    if (typeof lv?.bgm !== 'string') continue;
-    for (const u of lv.usedBy || []) {
-      const m = /\(boss:(boss_\d+)\)/.exec(String(u));
-      if (m && !bossBgm[m[1]] && !String(u).startsWith('mode_training')) bossBgm[m[1]] = flatBgm(bgmLeaf(`battle.ON_GAME_READY.${lv.bgm}`));
-    }
-  }
-  const sfxUi = {};
-  for (const [name, spec] of Object.entries(UI_SFX)) { const l = soundLeaf(resolveSpec(spec, audio.bank)); if (l) sfxUi[name] = l; else notes.push(`UI SFX ${name}: no sound`); }
-  const sfxBattle = {};
-  for (const [name, spec] of Object.entries(BATTLE_SFX)) { const l = soundLeaf(resolveSpec(spec, audio.bank)); if (l) sfxBattle[name] = l; else notes.push(`battle SFX ${name}: no sound`); }
-
-  // --- module type icons ----------------------------------------------------
-  const modules = {};
-  for (const t of [...new Set(moduleTypes || [])].filter((x) => typeof x === 'string' && /^[a-z0-9-]+$/i.test(x)).sort()) {
-    // the client's file name, else its lower-case form (the type id of a few modules is mixed case: WAH-Y → wah-y.png).
-    // One lower-case file per type: the official data spells one DEC X module 'dec-X' (uniequip_003_aglina) and the
-    // others 'dec-x'; two paths that differ only in case are one file on Windows / macOS (and in a release zip built or
-    // extracted there), so a case-sensitive server would miss one of them.
-    modules[t] = leaf(alt(`module/${safeName(t).toLowerCase()}.png`, [...new Set([t, t.toLowerCase()])].map((n) => joinUrl(RAW.aa2, `arts/ui/uniequiptype/${n}.png`))));
-  }
-
-  // --- 干员战斗语音 (excel/charword_table.json → audio.voice, audio.voiceJp) ---------------------------------
-  // The official lines of every operator the mode can field, for the slots the client can actually play: 行动出发 start /
-  // 行动开始 faceEnemy / 选中干员 select / 部署 place / 作战中1-4 skillN / 结算 result* (charword `placeType`,
-  // audio.mjs VOICE_BATTLE_SLOTS). A slot with several lines stays an array — the client draws one at random
-  // (public/js/audio.js voice). Operators without official battle voice keep no entry at all: the 17 预备干员
-  // (char_60x_c*, char_617_sharp2) and the mode's own 盟约·辅助干员 (char_616_pithst).
-  // The three prep-only slots (干员报到 gacha / 编入队伍 squad / 任命队长 squadFirst) are NOT planned by default: the
-  // client never requests them, and downloading them adds 360 files / 19.3 MB to every `npm run assets` — pass --voice-all for
-  // the complete official set (`voiceSlots: null`, reviewer note on the voice PR).
-  // `audio.voiceJp` (VOICE_JP_LANG): the same slots and lines in the Japanese dub, a second tree beside the Chinese one
-  // (the owner's request of 2026-10-08) — same file names, `audio/voice/jp/`.
-  const voiceSlotsByChar = indexVoice(charword, VOICE_ID_LANG, voiceSlots);
-  const voiceTree = (lang) => {
-    const tree = {};
-    for (const [charId, slots] of voiceSlotsByChar) {
-      if (!chars[charId]) continue;          // only the operators this game can field (`chars`: the 138 pool charIds and the 自选 picks)
-      const v = {};
-      for (const [slot, assets] of Object.entries(slots)) {
-        // one leaf per line (部署1 / 部署2 …): an array stays an array so the client can draw one — chaining them as
-        // alternatives of a single leaf would keep only the first line that landed on disk.
-        const lines = assets.map((a) => leaf(voiceAlt(a, lang))).filter(Boolean);
-        if (!lines.length) continue;
-        v[slot] = lines.length === 1 ? lines[0] : lines;
-      }
-      if (Object.keys(v).length) tree[charId] = v;
-    }
-    return tree;
-  };
-  const voice = voiceTree(voiceLang);
-  if (!Object.keys(voice).length) notes.push('battle voice: charword_table.json has no slots (index missing?)');
+  buildOperators();
+  const tokens = buildTokens();
+  const { enemies } = buildEnemies();
+  const { bonds, items, bands } = buildBonds();
+  const prof = buildProfessions();
+  const ui = buildUi();
+  const { bgm, bossBgm, lobbyMusic, sfxUi, sfxBattle } = buildAudio();
+  const modules = buildModules();
+  const { voice, voiceTree } = buildVoice();
 
   const template = {
     chars, enemies, tokens, bonds, items, bands, skills, skillsById, modules, ui, prof,
@@ -767,4 +410,406 @@ export function buildPlan({ assets07, ops03, enemies05, maps05, audio, modelsDat
     },
   };
   return { template, models, notes };
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildOperators() {
+    const charIds = Object.keys(operators).sort();
+    for (const id of charIds) {
+      const o = operators[id];
+      // DESIGN §16 operator loadouts: any skill of the character can be equipped — the icons, skill SFX and Spine skill
+      // clips of every skill index (the pool's primary index first, as before)
+      const idx0 = skillIdx.get(id) || [0];
+      const idx = [...idx0, ...(o.skills || []).map((k) => k.index).filter((i) => Number.isInteger(i) && i >= 0 && !idx0.includes(i)).sort((a, b) => a - b)];
+      const c = {};
+      c.avatar = leaf(alt(`char/avatar/${id}.png`, o.avatar?.e0e1?.url, o.avatar?.e0e1?.bytes));
+      if (o.avatar?.e2?.url) c.avatarE2 = leaf(alt(`char/avatar/${id}_2.png`, o.avatar.e2.url, o.avatar.e2.bytes));
+      c.portrait = leaf(alt(`char/portrait/${id}_1.png`, o.portrait?.e0e1?.url, o.portrait?.e0e1?.bytes));
+      if (o.portrait?.e2?.url) c.portraitE2 = leaf(alt(`char/portrait/${id}_2.png`, o.portrait.e2.url, o.portrait.e2.bytes));
+      // The seat card's default 立绘 (owner 2026-10-24): the operator's E0/E1 full-body official art (the E2 art often
+      // carries a huge background effect, which crops badly into a card; `_2` is the fallback when `_1` is absent). The
+      // file is stored as a head-and-torso 3:5 WebP crop (`tools/illust.mjs` / the fetch-assets post-step); the plan's
+      // URL is the PNG source. Operators the dump lacks simply have no leaf here and the card falls back to
+      // portraitE2 / portrait. Skins keep their own `illust` in the core skin catalogue (skins/catalogue.json), not here.
+      c.illust = leaf(alt(`char/illust/${id}.webp`, [
+        `${RAW.aceship}characters/${id}_1.png`,
+        `${RAW.aceship}characters/${id}_2.png`,
+      ]));
+      c.spine = {};
+      const front = fexliModel(`op:${id}:front`, 'op', `spine/op/${id}/front/`, o.battleSpine?.front, idx);
+      if (front) c.spine.front = front; else notes.push(`${id}: no Front battle Spine in research data`);
+      const back = fexliModel(`op:${id}:back`, 'op', `spine/op/${id}/back/`, o.battleSpine?.back, idx);
+      if (back) c.spine.back = back;
+      chars[id] = c;
+      // skill icons (+ skill SFX) of every skill index; normal-mode attack / impact sounds only (a ranged operator's own
+      // projectile banks projectile_chr_<name> as fallbacks — user playtest #4 item 6, audio.mjs pickUnitSfx)
+      const short = id.replace(/^char_\d+_/, '');
+      const sfx = pickUnitSfx(audio.unitBanks.get(id), { operator: true, projectile: {
+        born: audio.bank(`battle.ON_PROJECTILE_BORN.projectile_chr_${short}`), hit: audio.bank(`battle.ON_PROJECTILE_HIT.projectile_chr_${short}`) } });
+      for (const [role, path] of Object.entries(UNIT_SFX_OVERRIDES[id] || {})) if (!sfx[role]) sfx[role] = [path];
+      const { roles: u, mix } = unitSounds(audio, sfx, poolRef);
+      const skillSfx = {};
+      // Per-skill ATTACK / IMPACT sound (audio.mjs pickModeAttacks / pickModeHits): a skill mode has its own swing and its
+      // own hit sound, and neither may play as the unit's normal attack / impact (银灰, 纯烬艾雅法拉). An operator whose
+      // every attack belongs to a skill mode has no normal bank at all (司霆惊蛰 — 解放者, she only attacks while a skill
+      // runs — the report 「三技能攻击没有音效」); 赤刃明霄陈's S3 slashes swing `p_atk_hljdswd_s` and land `p_imp_hljdswd_s`
+      // where her normal attack uses the `_n` files (the report 「斩击音效应该和普通攻击不一样」). The mode letter of a skill
+      // index is read from that skill's own activation sound (`p_skill_lzxqlkl_s` → s = 技能3); without one (most operators
+      // carry no activation sound) we infer 技能1 / 2 / 3 = d / h / s ([ASSUMED], below). The client plays
+      // them while that skill is active (public/js/audio.js unit()).
+      const modeAttacks = pickModeAttacks(audio.unitBanks.get(id));
+      const modeHits = pickModeHits(audio.unitBanks.get(id));
+      const attacks = {};
+      const hits = {};
+      const attackMix = {}, hitMix = {};
+      const attackPools = {}, hitPools = {};
+      for (const i of idx) {
+        const s = (o.skills || []).find((k) => k.index === i);
+        if (!s) { notes.push(`${id}: skill index ${i} missing in research data`); continue; }
+        const iconId = s.iconId || s.skillId;
+        if (s.icon?.url && !skills[iconId]) skills[iconId] = leaf(alt(`skill/${safeName(iconId)}.png`, s.icon.url, s.icon.bytes));
+        if (s.skillId) skillsById[s.skillId] = iconId;
+        // Skill SFX. `ON_SKILL_START.<skillId>` is the manual cast stinger; auto skills carry their start sound in
+        // `ON_ABILITY_START.<skillId>` instead (冻河's S1 / S2 have no ON_SKILL_START bank at all). Keep both as
+        // alternatives — the manifest build keeps the first one whose file exists (the local client may lack a
+        // `battle/b_char/*` stinger the web mirror has).
+        const ss = audio.skillBanks.get(s.skillId)?.get('ON_SKILL_START') || [];
+        const abilityStart = audio.bank(`battle.ON_ABILITY_START.${s.skillId}`);
+        const cast = [...ss, ...abilityStart.filter((p) => !ss.includes(p))];
+        if (cast.length) skillSfx[String(i)] = soundLeaf(cast);
+        // [ASSUMED] Without a named activation mode, infer d/h/s from slot 1/2/3; see DESIGN §28.17.
+        const letter = skillModeLetter(ss?.[0]) ?? skillModeLetter(cast[0]) ?? SLOT_MODE_LETTER[i];
+        // The skill's own swing / impact banks are named by SKILL ID (`ON_ABILITY_ON.skchr_tocka_1` …), not by the
+        // unit's `attack` ability; prefer them, then the mode letter, then the skill's own projectile impact
+        // (`ON_PROJECTILE_HIT.projectile_<name>_s<slot>`).
+        const ownSwing = audio.bank(`battle.ON_ABILITY_ON.${s.skillId}`);
+        const swing = ownSwing.length ? ownSwing : (letter && modeAttacks[letter]) || null;
+        if (swing) {
+          attacks[String(i)] = soundLeaf(swing);
+          const m = audio.mixOf?.(swing);
+          if (m) attackMix[String(i)] = m;
+          const pool = poolRef(swing);
+          if (pool) attackPools[String(i)] = pool;
+        }
+        const ownHit = audio.bank(`battle.ON_ABILITY_HIT.${s.skillId}`);
+        const projName = [`projectile_chr_${short}_s${i + 1}`, `projectile_${short}_s${i + 1}`]
+          .map((n) => audio.bank(`battle.ON_PROJECTILE_HIT.${n}`)).find((p) => p.length) || [];
+        const hit = ownHit.length ? ownHit : (letter && modeHits[letter]) || projName;
+        if (hit.length) {
+          hits[String(i)] = soundLeaf(hit);
+          const m = audio.mixOf?.(hit);
+          if (m) hitMix[String(i)] = m;
+          const pool = poolRef(hit);
+          if (pool) hitPools[String(i)] = pool;
+        }
+      }
+      const primarySkill = skillSfx[String(idx[0])];
+      if (primarySkill) u.skill = primarySkill;
+      if (Object.keys(skillSfx).length) u.skills = skillSfx;
+      if (Object.keys(attacks).length) u.attacks = attacks;
+      if (Object.keys(hits).length) u.hits = hits;
+      if (Object.keys(attackMix).length) u.attackMix = attackMix;
+      if (Object.keys(hitMix).length) u.hitMix = hitMix;
+      if (Object.keys(attackPools).length) u.attackPools = attackPools;
+      if (Object.keys(hitPools).length) u.hitPools = hitPools;
+      if (mix) u.mix = mix;
+      if (Object.keys(u).length) unitsSfx[id] = u;
+    }
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildTokens() {
+    // --- tokens --------------------------------------------------------------
+    const chessById = new Map((ops03?.chess || []).map((c) => [c.chessId, c]));
+    const tokens = {};
+    const tokenIds = new Set(Object.keys(assets07?.tokens || {}));
+    for (const id of extraTokenIds) if (typeof id === 'string' && /^token_\d+_[a-z0-9_]+$/i.test(id)) tokenIds.add(id);
+    for (const id of [...tokenIds].sort()) {
+      // Tokens unknown to research 07: default avatar/Spine locations (misses are tolerated).
+      const t = assets07?.tokens?.[id] ?? {
+        avatar: { url: `${RAW.yuanyan}avatar/${id}.png` },
+        battleSpineDefault: null,
+        battleSpineSkinVariantsOnly: [id],
+      };
+      const usedBy = ops03?.tokensUsedByPool?.[id]?.usedByChess || [];
+      const ownerChess = usedBy.map((cid) => chessById.get(cid)).find(Boolean);
+      const entry = { owner: ownerChess?.charId || ownerChess?.backup?.charId || null };
+      entry.avatar = t.avatar?.url ? leaf(alt(`token/avatar/${id}.png`, t.avatar.url, t.avatar.bytes)) : null;
+      let model = null;
+      if (t.battleSpineDefault) {
+        model = fexliModel(`token:${id}`, 'token', `spine/token/${id}/`, t.battleSpineDefault, [0]);
+      } else if (Array.isArray(t.battleSpineSkinVariantsOnly) && t.battleSpineSkinVariantsOnly.length) {
+        // Skin-variant models live in a `Spine/` folder, or `Front/` for directional ones.
+        const v = t.battleSpineSkinVariantsOnly[0];
+        const bases = ['Spine', 'Front'].map((f) => `${RAW.fexli}spine/${encodeURIComponent(id)}/${encodeURIComponent(v)}/${f}/${encodeURIComponent(v)}`);
+        model = fexliModel(`token:${id}`, 'token', `spine/token/${id}/`, {
+          skel: bases.map((b) => b + '.skel'), atlas: bases.map((b) => b + '.atlas'), png: bases.map((b) => b + '.png'),
+        }, [0]);
+        if (model) entry.spineVariant = v;
+      }
+      entry.spine = model;
+      // the official model from the local client, drawn instead of the avatar (or of `spine`) when extracted (optional)
+      const loc = localTokenSpines && Object.hasOwn(localTokenSpines, id) ? localTokenSpines[id] : null;
+      if (loc && typeof loc === 'object') {
+        entry.spineLocal = literal({ group: `spine/token/${id}`, ...loc });
+        notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);
+      }
+      tokens[id] = entry;
+      const { roles: u, mix } = unitSounds(audio, pickUnitSfx(audio.unitBanks.get(id)), poolRef);
+      if (mix) u.mix = mix;
+      if (Object.keys(u).length) unitsSfx[id] = u;
+    }
+    return tokens;
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildEnemies() {
+    // --- enemies -------------------------------------------------------------
+    const handbookOf = new Map();
+    for (const b of Object.values(enemies05?.bosses || {})) if (b?.enemyId && b.handbookId && b.handbookId !== b.enemyId) handbookOf.set(b.enemyId, b.handbookId);
+    for (const [eid, hb] of Object.entries(extraHandbook || {})) if (typeof hb === 'string' && hb !== eid && !handbookOf.has(eid)) handbookOf.set(eid, hb);
+    const mdData = modelsData?.data || {};
+    const enemyDir = modelsData?.storageDirectory?.Enemy || 'models_enemies';
+    const pick = (v) => (Array.isArray(v) ? (v.find((x) => typeof x === 'string' && !x.includes('$')) ?? v[0]) : v);
+    const arkModel = (eid) => {
+      const key = eid.replace(/^enemy_/, '');
+      const al = mdData[key]?.assetList;
+      const skel = pick(al?.['.skel']); const atlas = pick(al?.['.atlas']); const png = pick(al?.['.png']);
+      if (![skel, atlas, png].every((x) => typeof x === 'string' && x)) return null;
+      const base = `${RAW.arkModels}${enemyDir}/${encodeURIComponent(key)}/`;
+      const rec07 = assets07?.enemies?.[eid]?.battleSpine;
+      const dir = `spine/enemy/${eid}/`;
+      const stem = skelStem(skel);
+      const mk = (file, r, rel) => alt(rel ?? dir + safeName(file), base + encodeURIComponent(file), bytesOf(r, base + encodeURIComponent(file)));
+      return addModel(`enemy:${eid}`, {
+        kind: 'enemy', dir, pma: true, skillIndices: [0], baseUrl: base,
+        skel: mk(skel, rec07?.skel, `${dir}${stem}.skel`),
+        atlas: { ...mk(atlas, rec07?.atlas, `${dir}${stem}.atlas`), mutable: true },
+        pngs: [mk(png, rec07?.png)],
+      });
+    };
+    const baseIdOf = (eid) => { const m = /^(enemy_\d+_[a-z0-9]+?)_\d+$/i.exec(eid); return m ? m[1] : null; };
+    const enemyIdSet = new Set(collectEnemyIds({ assets07, enemies05, maps05, ops03 }));
+    for (const id of extraEnemyIds) if (typeof id === 'string' && /^(?:enemy|trap)_\d+_[a-z0-9_]+$/i.test(id)) enemyIdSet.add(id);
+    // Boss handbook ids (their own icon/model ids) are addressable too.
+    for (const hb of handbookOf.values()) if (/^enemy_\d+_[a-z0-9_]+$/i.test(hb)) enemyIdSet.add(hb);
+    const enemyIds = [...enemyIdSet].sort();
+    const enemies = {};
+    /** Units without a handbook/enemy record whose only UI art is one file (see INLINE_DEF_UNITS in fetch-assets.mjs). */
+    const LITERAL_ENEMY_ICONS = { trap_258_rgcssm: '/assets/enemy/icon/trap_258_rgcssm.png' };
+    for (const id of enemyIds) {
+      const e = {};
+      const icon07 = assets07?.enemies?.[id]?.icon;
+      const iconAlts = [alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${id}.png`, bytesOf(icon07, `${RAW.yuanyan}enemy/${id}.png`))];
+      for (const other of [handbookOf.get(id), baseIdOf(id)]) if (other) iconAlts.push(alt(`enemy/icon/${id}.png`, `${RAW.yuanyan}enemy/${other}.png`));
+      e.icon = LITERAL_ENEMY_ICONS[id] ? literal(LITERAL_ENEMY_ICONS[id]) : leaf(iconAlts);
+      // Spine: own model, else alias chain (research 07 §5.6).
+      let spine = arkModel(id);
+      if (!spine) {
+        const seen = new Set([id]);
+        const queue = [ENEMY_SPINE_ALIAS[id], baseIdOf(id), handbookOf.get(id)].filter(Boolean);
+        while (!spine && queue.length) {
+          const cand = queue.shift();
+          if (seen.has(cand)) continue;
+          seen.add(cand);
+          spine = arkModel(cand);
+          if (spine) e.spineAliasOf = cand;
+          else queue.push(...[ENEMY_SPINE_ALIAS[cand], baseIdOf(cand), handbookOf.get(cand)].filter(Boolean));
+        }
+        if (!spine) notes.push(`${id}: no enemy Spine upstream (client draws the icon, if any, or a glyph)`);
+        else notes.push(`${id}: Spine aliased to ${e.spineAliasOf}`);
+      }
+      e.spine = spine;
+      // the official model from the local client, drawn instead of `spine` when the extraction is installed (optional)
+      const loc = localEnemySpines && Object.hasOwn(localEnemySpines, id) ? localEnemySpines[id] : null;
+      if (loc && typeof loc === 'object') {
+        e.spineLocal = literal({ group: `spine/enemy/${id}`, ...loc });
+        notes.push(`${id}: official Spine from the local client when extracted (spineLocal)`);
+      }
+      enemies[id] = e;
+      let banks = audio.unitBanks.get(id);
+      for (const other of [handbookOf.get(id), e.spineAliasOf, baseIdOf(id)]) {
+        if (banks?.size) break;
+        if (other) banks = audio.unitBanks.get(other);
+      }
+      const { roles: u, mix } = unitSounds(audio, pickUnitSfx(banks), poolRef);
+      if (mix) u.mix = mix;
+      if (Object.keys(u).length) unitsSfx[id] = u;
+    }
+    return { enemies };
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildBonds() {
+    // --- bonds / items / bands -------------------------------------------------
+    const bonds = {};
+    for (const [bondId, b] of Object.entries(assets07?.bonds || {})) {
+      bonds[bondId] = leaf(alt(`bond/${bondId}.png`, b.icon?.url, b.icon?.bytes), b.fallbackCampLogo ? alt(`bond/${bondId}.png`, b.fallbackCampLogo) : null);
+    }
+    const items = {};
+    for (const [trapId, it] of Object.entries(assets07?.items || {})) items[trapId] = leaf(alt(`item/${trapId}.png`, it.icon?.url, it.icon?.bytes));
+    const bands = {};
+    for (const [bandId, b] of Object.entries(assets07?.bands || {})) bands[bandId] = leaf(alt(`band/${bandId}.png`, b.icon?.url, b.icon?.bytes));
+    return { bonds, items, bands };
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildProfessions() {
+    // --- professions ----------------------------------------------------------
+    const prof = { icon: {}, large: {}, battlecard: {}, sub: {} };
+    for (const p of PROFESSIONS) {
+      const i = assets07?.arts?.professionIcon?.[p];
+      if (i) prof.icon[p] = leaf(alt(`prof/icon_${p}.png`, i));
+      const l = assets07?.arts?.professionIconLargeWhite?.[p];
+      if (l) prof.large[p] = leaf(alt(`prof/large_${p}.png`, l));
+    }
+    for (const p of [...PROFESSIONS, 'token']) {
+      prof.battlecard[p] = leaf(alt(`prof/battlecard_${p}.png`, joinUrl(RAW.aa2, `arts/ui/[uc]battlecommon/ui_battle_new/battlecard/icon_profession_${p}.png`)));
+    }
+    for (const o of Object.values(operators)) {
+      const sub = o.subProfessionId;
+      if (typeof sub === 'string' && sub && !prof.sub[sub] && o.subProfessionIcon) prof.sub[sub] = leaf(alt(`prof/sub/${safeName(sub)}.png`, o.subProfessionIcon));
+    }
+    return prof;
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildUi() {
+    // --- UI ------------------------------------------------------------------
+    const ui = {};
+    const addUi = (group, key, url) => {
+      const k = safeName(key);
+      const name = `${group}/${k}`;
+      if (!ui[name] && url) ui[name] = leaf(alt(`ui/${group}/${k}.png`, url));
+    };
+    for (const [group, entries] of Object.entries(assets07?.autochessUi || {})) {
+      for (const [key, url] of Object.entries(entries || {})) addUi(group, key, url);
+    }
+    const nations = new Set(Object.values(operators).map((o) => o.nationId).filter(Boolean));
+    const logos = new Set(['logo_rhodes', ...[...nations].map((n) => `logo_${n}`)]);
+    for (const b of Object.values(assets07?.bonds || {})) if (b.fallbackCampLogo) logos.add(urlBase(b.fallbackCampLogo).replace(/\.png$/i, ''));
+    for (const [src, group] of Object.entries(ARTS_GROUPS)) {
+      for (const [key, url] of Object.entries(assets07?.arts?.[src] || {})) {
+        if (src === 'campLogo' && !logos.has(key)) continue;
+        if (src === 'loadingIllust' && !LOADING_USED.has(key)) continue;
+        addUi(group, key, url);
+      }
+    }
+    for (const [group, key, path] of UI_EXTRAS) addUi(group, key, joinUrl(RAW.aa2, path));
+    return ui;
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildAudio() {
+    // --- audio ----------------------------------------------------------------
+    const bgmLeaf = (bankName) => {
+      const b = audio.bgm(bankName);
+      if (!b?.loop) { notes.push(`BGM bank ${bankName} not found`); return null; }
+      const out = { loop: soundLeaf([b.loop], 'bgm', 1) };
+      if (b.intro) out.intro = soundLeaf([b.intro], 'bgm', 1);
+      return out;
+    };
+    // BGM files are flattened to audio/bgm/<basename>.
+    const flatBgm = (node) => {
+      if (!node) return node;
+      for (const k of Object.keys(node)) {
+        const l = node[k];
+        if (l?.alts) for (const a of l.alts) a.rel = 'audio/bgm/' + safeName(a.rel.split('/').pop());
+      }
+      return node;
+    };
+    // 联防 BGM: the official 联防 levels (`escaped_single` / `escaped_multi`) declare `bgmEvent = corrosion` — a
+    // 卡西米尔 act13d5d0 battle track — so the rescue phase does NOT reuse the 作战's track. Kept out of `bgm` when the
+    // bank is missing (the client then falls back to `bgm.combat`; public/js/audio.js resolveBgm), so the manifest stays
+    // valid for an older audio_data.
+    const unite = flatBgm(bgmLeaf('battle.ON_GAME_READY.corrosion'));
+    // 开战 BGM: the two official battle tracks of the mode's own 卡西米尔 act (music_act13side_1 骑士之日 /
+    // music_act13side_2 无畏者, 塞壬唱片). The client does not draw them: the round decides (audio.js combatTrackFor —
+    // 无畏者 for rounds 1–7, 骑士之日 from round 8 on), so index 0 must stay `bat_kazimierz2_1` and index 1
+    // `bat_kazimierz2_2` (test/ui/audio.test.js pins both the order and the round table).
+    // Kept out of `bgm` below when the index has neither bank, so the manifest stays valid for an older audio_data.
+    const combatAlts = ['battle.ON_GAME_READY.bat_kazimierz2_1', 'battle.ON_GAME_READY.bat_kazimierz2_2']
+      .map((n) => flatBgm(bgmLeaf(n))).filter(Boolean);
+    const bgm = {
+      lobby: flatBgm(bgmLeaf('sys.ON_ACTIVITY_LOADED.act2autochess')),
+      prep: flatBgm(bgmLeaf('battle.ON_GAME_READY.act1autochess_shop')),
+      combat: flatBgm(bgmLeaf('battle.ON_GAME_READY.act1autochess_shop')),
+      boss: flatBgm(bgmLeaf('battle.ON_GAME_READY.rglk1phantomcastle')),
+      ...(combatAlts.length ? { combatAlts } : {}),
+      ...(unite ? { unite } : {}),
+    };
+    // 主界面音乐 (the Hub's picker, tools/assets/lobby-music.mjs): the official 音乐鉴赏 `musics[]` entries, one intro /
+    // loop pair each. The id is the catalogue id, so the client's saved pick survives a manifest rebuild; a track whose
+    // bank is missing from this audio dump is skipped and the client falls back to `bgm.lobby`.
+    const lobbyMusic = {};
+    for (const item of LOBBY_MUSIC) {
+      const m = typeof audio.music === 'function' ? audio.music(item.id) : null;
+      if (!m) { notes.push(`lobby music ${item.id} not in audio_data (skipped)`); continue; }
+      const entry = { name: m.name, group: item.group };
+      if (m.intro) entry.intro = leaf(alt(`audio/music/${item.id}_intro.mp3`, joinUrl(RAW.aa2voice, m.intro)));
+      entry.loop = leaf(alt(`audio/music/${item.id}_loop.mp3`, joinUrl(RAW.aa2voice, m.loop)));
+      lobbyMusic[item.id] = entry;
+    }
+    const bossBgm = {};
+    for (const lv of Object.values(maps05?.roundLevels || {})) {
+      if (typeof lv?.bgm !== 'string') continue;
+      for (const u of lv.usedBy || []) {
+        const m = /\(boss:(boss_\d+)\)/.exec(String(u));
+        if (m && !bossBgm[m[1]] && !String(u).startsWith('mode_training')) bossBgm[m[1]] = flatBgm(bgmLeaf(`battle.ON_GAME_READY.${lv.bgm}`));
+      }
+    }
+    const sfxUi = {};
+    for (const [name, spec] of Object.entries(UI_SFX)) { const l = soundLeaf(resolveSpec(spec, audio.bank)); if (l) sfxUi[name] = l; else notes.push(`UI SFX ${name}: no sound`); }
+    const sfxBattle = {};
+    for (const [name, spec] of Object.entries(BATTLE_SFX)) { const l = soundLeaf(resolveSpec(spec, audio.bank)); if (l) sfxBattle[name] = l; else notes.push(`battle SFX ${name}: no sound`); }
+    return { bgm, bossBgm, lobbyMusic, sfxUi, sfxBattle };
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildModules() {
+    // --- module type icons ----------------------------------------------------
+    const modules = {};
+    for (const t of [...new Set(moduleTypes || [])].filter((x) => typeof x === 'string' && /^[a-z0-9-]+$/i.test(x)).sort()) {
+      // the client's file name, else its lower-case form (the type id of a few modules is mixed case: WAH-Y → wah-y.png).
+      // One lower-case file per type: the official data spells one DEC X module 'dec-X' (uniequip_003_aglina) and the
+      // others 'dec-x'; two paths that differ only in case are one file on Windows / macOS (and in a release zip built or
+      // extracted there), so a case-sensitive server would miss one of them.
+      modules[t] = leaf(alt(`module/${safeName(t).toLowerCase()}.png`, [...new Set([t, t.toLowerCase()])].map((n) => joinUrl(RAW.aa2, `arts/ui/uniequiptype/${n}.png`))));
+    }
+    return modules;
+  }
+
+  /** @returns {any} the part of the plan this stage builds (mutates notes/models/sfxPools). */
+  function buildVoice() {
+    // --- 干员战斗语音 (excel/charword_table.json → audio.voice, audio.voiceJp) ---------------------------------
+    // The official lines of every operator the mode can field, for the slots the client can actually play: 行动出发 start /
+    // 行动开始 faceEnemy / 选中干员 select / 部署 place / 作战中1-4 skillN / 结算 result* (charword `placeType`,
+    // audio.mjs VOICE_BATTLE_SLOTS). A slot with several lines stays an array — the client draws one at random
+    // (public/js/audio.js voice). Operators without official battle voice keep no entry at all: the 17 预备干员
+    // (char_60x_c*, char_617_sharp2) and the mode's own 盟约·辅助干员 (char_616_pithst).
+    // The three prep-only slots (干员报到 gacha / 编入队伍 squad / 任命队长 squadFirst) are NOT planned by default: the
+    // client never requests them, and downloading them adds 360 files / 19.3 MB to every `npm run assets` — pass --voice-all for
+    // the complete official set (`voiceSlots: null`, reviewer note on the voice PR).
+    // `audio.voiceJp` (VOICE_JP_LANG): the same slots and lines in the Japanese dub, a second tree beside the Chinese one
+    // (the owner's request of 2026-10-08) — same file names, `audio/voice/jp/`.
+    const voiceSlotsByChar = indexVoice(charword, VOICE_ID_LANG, voiceSlots);
+    const voiceTree = (lang) => {
+      const tree = {};
+      for (const [charId, slots] of voiceSlotsByChar) {
+        if (!chars[charId]) continue;          // only the operators this game can field (`chars`: the 138 pool charIds and the 自选 picks)
+        const v = {};
+        for (const [slot, assets] of Object.entries(slots)) {
+          // one leaf per line (部署1 / 部署2 …): an array stays an array so the client can draw one — chaining them as
+          // alternatives of a single leaf would keep only the first line that landed on disk.
+          const lines = assets.map((a) => leaf(voiceAlt(a, lang))).filter(Boolean);
+          if (!lines.length) continue;
+          v[slot] = lines.length === 1 ? lines[0] : lines;
+        }
+        if (Object.keys(v).length) tree[charId] = v;
+      }
+      return tree;
+    };
+    const voice = voiceTree(voiceLang);
+    if (!Object.keys(voice).length) notes.push('battle voice: charword_table.json has no slots (index missing?)');
+    return { voice, voiceTree };
+  }
 }
