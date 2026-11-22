@@ -56,7 +56,7 @@ describe('client leftovers — mock harness', { skip: !ENABLED && 'set SP_E2E=1 
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('requestfailed', (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url())) problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`); });
     page.on('response', (r) => { if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`); });
-    await page.goto(`${base}/dev/game-mock.html?shot=1&${query}`, { waitUntil: 'networkidle0' });
+    await page.goto(`${base}/dev/game-mock.html?shot=1&e2e=1&${query}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!document.querySelector('.screen:not(.gload)'), { timeout: 15000 });
     await sleep(900);
     return { page, problems };
@@ -231,9 +231,7 @@ describe('client leftovers — real server', { skip: !ENABLED && 'set SP_E2E=1 (
     try {
       await c.open();
       await c.enter('替换');
-      await c.click('.mode-card', '独立模拟');
-      await c.click('.diff-card', '标准模拟');
-      await c.click('.create-box button', '开始独立模拟');
+      await c.createSolo({ protocol: '标准模拟' });
       await c.waitFor((s) => !!s.room, 'solo room');
       if (!(await c.st()).phase) await c.click('.room-bar__right button', '开始模拟', { timeout: 20000 });
       await c.waitFor((s) => s.phase === 'INFO_CHECK', 'briefing', 30000);
@@ -358,9 +356,7 @@ describe('client leftovers — real server', { skip: !ENABLED && 'set SP_E2E=1 (
     try {
       await c.open();
       await c.enter('重启');
-      await c.click('.mode-card', '独立模拟');
-      await c.click('.diff-card', '标准模拟');
-      await c.click('.create-box button', '开始独立模拟');
+      await c.createSolo({ protocol: '标准模拟' });
       await c.waitFor((s) => !!s.room, 'solo room');
       if (!(await c.st()).phase) await c.click('.room-bar__right button', '开始模拟', { timeout: 20000 });
       await c.waitFor((s) => s.phase === 'INFO_CHECK', 'briefing', 30000);
@@ -387,9 +383,7 @@ describe('client leftovers — real server', { skip: !ENABLED && 'set SP_E2E=1 (
       assert.equal(restoring, false);
       await c.shot('restart');
       // the lobby works on the new server: a new solo run starts
-      await c.click('.mode-card', '独立模拟');
-      await c.click('.diff-card', '标准模拟');
-      await c.click('.create-box button', '开始独立模拟');
+      await c.createSolo({ protocol: '标准模拟' });
       await c.waitFor((x) => !!x.room, 'a new solo room on the restarted server');
       if (!(await c.st()).phase) await c.click('.room-bar__right button', '开始模拟', { timeout: 20000 });
       await c.waitFor((x) => x.phase === 'INFO_CHECK', 'briefing on the restarted server', 30000);

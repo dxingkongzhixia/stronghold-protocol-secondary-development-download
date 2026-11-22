@@ -244,7 +244,7 @@ export class Client {
     });
     page.on('response', (r) => { if (r.status() >= 400) this.problems.push(`http ${r.status()}: ${r.url()}`); });
     page.on('dialog', (d) => d.dismiss().catch(() => {}));
-    await page.goto(`${this.base}/${query}`, { waitUntil: 'domcontentloaded' });
+    await page.goto((() => { const u = new URL(`${this.base}/${query}`); u.searchParams.set('e2e', '1'); return u.href; })(), { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!globalThis.__SP__ && !!document.querySelector('.screen'), { timeout: BOOT_TIMEOUT_MS });
   }
 
@@ -368,6 +368,23 @@ export class Client {
     await this.page.keyboard.type(name);
     await this.click('.title-login button', '进入');
     await this.page.waitForSelector('.lobby-screen', { timeout: 20000 });
+  }
+
+  /** The hub lobby's room creation: 同盟模拟 → a protocol card → 创建同盟; resolves once the room has a code. */
+  async createRoom({ protocol = '标准模拟' } = {}) {
+    await this.click('.hub-entry--coop');
+    await this.page.waitForSelector('.proto-start', { timeout: 15000 });
+    if (protocol) await this.click('.pcard', protocol);
+    await this.click('.proto-start', '创建同盟');
+    return (await this.waitFor((s) => !!s.room?.code, 'room created')).room;
+  }
+
+  /** The hub lobby's solo creation: 独立模拟 → a protocol card → 开始独立模拟. */
+  async createSolo({ protocol = '标准模拟' } = {}) {
+    await this.click('.hub-entry--solo');
+    await this.page.waitForSelector('.proto-start', { timeout: 15000 });
+    if (protocol) await this.click('.pcard', protocol);
+    await this.click('.proto-start', '开始独立模拟');
   }
 
   // ---- field view (render engine debug hooks) -------------------------------------------------------------------
