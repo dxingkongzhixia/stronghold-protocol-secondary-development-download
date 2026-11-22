@@ -274,6 +274,16 @@ function dataSourceFor(data) {
 export class Match {
   /** @param {object} opts see MATCH INTERFACE above */
   constructor(opts) {
+    this._initOptions(opts);
+    this._initKeel(opts);
+    this._initRuntime(opts);
+    this._initSeats(opts);
+    this._initSetup();
+    this._initState(opts);
+  }
+
+  /** Validate the options, install the room data / descriptor, GameData, scheduler and plugin registries. */
+  _initOptions(opts) {
     if (!opts || !Array.isArray(opts.seats) || opts.seats.length === 0) throw new TypeError('Match: seats required');
     if (typeof opts.send !== 'function' || typeof opts.broadcast !== 'function' || typeof opts.onEnd !== 'function') {
       throw new TypeError('Match: send/broadcast/onEnd callbacks required');
@@ -360,6 +370,10 @@ export class Match {
         }
       }
     }
+  }
+
+  /** The effect registry, dispatcher, prep-DSL grants and the match/policy Keel runtime. */
+  _initKeel(opts) {
     // The registry of a v2-script room must be its own: the extension registry is not process-global any more.
     const extensionRegistry = this.keelV2?.registry ?? this.extensions;
     const keelDsl = (this.keel?.plugins ?? []).flatMap((p) => (p.content?.dsl ?? []).map((entry) => ({ pluginId: p.id, spec: entry.spec ?? entry })));
@@ -396,6 +410,10 @@ export class Match {
         this.keelMatch.start({ battleStart: false });
       }
     }
+  }
+
+  /** Speed / bot / host / test-mode switches, client-combat and verification modes, the per-match RNGs. */
+  _initRuntime(opts) {
     this.timerScale = Number.isFinite(opts.timerScale) && opts.timerScale >= 0 ? opts.timerScale : 1;
     this.gameSpeed = Number.isFinite(opts.combatSpeed) && opts.combatSpeed > 0 ? Math.min(opts.combatSpeed, 200) : GAME_SPEED;
     /** layouts a bot rehearses per prep with the real simulation (bot.js; 0 = heuristic placement only) */
@@ -513,7 +531,10 @@ export class Match {
     this.rngDraft = rng('draft');
     this.rngBots = rng('bots');
     this.rngMeta = rng('meta');
+  }
 
+  /** PlayerState per seat, the seat order, DSL grants, spectators and the lone-human flag. */
+  _initSeats(opts) {
     /** @type {Map<string, PlayerState>} */
     this.players = new Map();
     const seen = new Set();
@@ -544,7 +565,10 @@ export class Match {
      * (draft order and skip, 6 机变 cards, 联防 …) stay.
      */
     this.loneHuman = this.order.filter((p) => !p.isBot).length === 1;
+  }
 
+  /** Draw this match's waves, stage, factions, pools, disabled bonds and DIY stock (and the 规程 core-bond groups). */
+  _initSetup() {
     // per-match setup (DESIGN §6.5)
     const setup = setupMatchWaves(this.gd, this.rngSetup);
     this.stageId = setup.stageId;
@@ -585,7 +609,10 @@ export class Match {
         this.coreBondGroups = [core.slice(0, half).sort(), core.slice(half).sort()];
       }
     }
+  }
 
+  /** Phase / round / deadline state, every timer slot, drafts and fields, the external AI host and the test journal. */
+  _initState(opts) {
     this.phase = PHASE.LOBBY;
     this.round = 0;
     this.deadline = 0;
@@ -653,6 +680,7 @@ export class Match {
     this.externalAI = createExternalAI(this, opts);
     if (this.test && opts.journal !== false) installTestTrace(this, opts);
   }
+
 }
 
 // the method modules, in this order (a name defined twice is an error, never a silent override)
