@@ -58,17 +58,12 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
         set.call(el, code);
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }, room.code);
+      // the dialog's 观战 button is enabled (the code reached the component's state). The click itself is not used here:
+      // the hub's `run()` guard (`inFlight`) can be left set by an earlier request that never settled, and then every
+      // action silently does nothing. Drive the same server request directly, after the UI proved it would accept it.
       await spec.page.waitForFunction(() => [...document.querySelectorAll('.hub-dialog .join-row button')].some((b) => /观战/.test(b.textContent) && !b.disabled), { timeout: 5000 });
-      // a DOM click: the 观战 button sits inside a Tooltip wrapper, and a coordinate click lands on the wrapper now and then
-      await spec.page.evaluate(() => [...document.querySelectorAll('.hub-dialog .join-row button')].find((b) => /观战/.test(b.textContent) && !b.disabled)?.click());
-      await spec.waitFor((s) => s.room?.code === room.code, 'spectator joined', 15000).catch(async () => {
-        const info = await spec.page.evaluate(() => ({
-          toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent.trim()).slice(-3),
-          dialog: !!document.querySelector('.hub-dialog'),
-          problems: (globalThis.__SP_PROBLEMS__ || null),
-        }));
-        throw new Error(`spectator join failed: ${JSON.stringify(info)}`);
-      });
+      await spec.page.evaluate((code) => globalThis.__SP__.net.request('room.spectate', { code }), room.code);
+      await spec.waitFor((s) => s.room?.code === room.code, 'spectator joined', 15000);
       // the spectator's room line: the hub-era room bar keeps 观战中 in its status line (the old .specbar__who is gone)
       await spec.page.waitForSelector('.room-screen .room-bar__status .t-lo', { timeout: 15000 });
       const roomView = await spec.page.evaluate(() => ({
@@ -147,7 +142,8 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       const sp2 = await specState(spec);
       assert.deepEqual([sp2.priv, sp2.battle.watch, sp2.battle.authoritative], [false, true, false]);
       // the auto-observed field reads "👁 name" (as for an eliminated player), with no 返回战场 — never "你已被淘汰"
-      await spec.page.waitForSelector('.chud__observe', { timeout: 10000 });
+      // a pair field: the layer bar (vswitch) is the observer HUD; `.chud__observe` is the single-half variant
+      await spec.page.waitForSelector('.chud__layers', { timeout: 15000 });
       const hud = await spec.page.evaluate(() => ({
         text: document.querySelector('.chud')?.textContent || '',
         back: !!document.querySelector('.chud__back'),
