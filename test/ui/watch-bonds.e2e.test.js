@@ -137,6 +137,8 @@ async function place(c, chessId) {
   const n0 = (await c.boardPieces()).length;
   const tile = await c.freeTileFor(piece.uid);
   assert.ok(tile, `${c.label}: a legal tile for ${chessId}`);
+  // the field (canvas or the DOM fallback) mounts after the prep screen's own async load
+  await c.page.waitForSelector('.gm canvas, .gm .ff-piece', { timeout: 20000 }).catch(() => {});
   await c.drag(await c.piecePoint(piece.uid), await c.tilePoint(tile.row, tile.col));
   await c.page.waitForSelector('.fwheel__dia', { timeout: 4000 });
   await c.swipe('RIGHT');
