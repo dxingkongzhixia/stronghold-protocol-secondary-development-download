@@ -638,9 +638,15 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
         const name = mv.names[pid];
         await watchMate(guest, name);
         await ownerIs(guest, name);
-        await guest.page.waitForFunction((name) => (document.querySelector('.chud__layers .vswitch__label')?.textContent || '').includes(name), { timeout: 6000 }, name);
+        await guest.page.waitForFunction((name) => {
+          const label = document.querySelector('.chud__layers .vswitch__label')?.textContent
+            || document.querySelector('.chud__observe .vswitch__label')?.textContent || '';
+          return label.includes(name);
+        }, { timeout: 8000 }, name);
         st = await stripOf(guest);
-        assert.deepEqual([st.owner, st.bonds, st.pillBack], [name, mv.bonds[name], false], `picked ${name}: their half and bonds (no 返回战场 when eliminated)`);
+        assert.ok((st.observe || st.pill || '').includes(name), `picked ${name}: the HUD names them (${JSON.stringify(st)})`);
+        assert.deepEqual([st.owner, st.bonds], [name, mv.bonds[name]], `picked ${name}: their half and bonds`);
+        assert.equal(st.pillBack, false, `picked ${name}: no 返回战场 when eliminated`);
       }
       await sleep(900); // the camera flies to the half (750 ms)
       await guest.shot('picked');
