@@ -111,6 +111,10 @@ export function cameraSettled(page, ms = 1500) {
  * @param {{ steps?: number, lead?: number, pause?: number, settle?: number, before?: Function|null, retarget?: Function|null }} [o]
  */
 export async function aimedDrag(page, from, to, { steps = 14, lead = 3, pause = 14, settle = 160, before = null, retarget = null } = {}) {
+  // A null end is almost always a piece the page has not drawn (piecePoint returns null): say so here, or the caller
+  // only sees `Cannot read properties of null (reading 'x')` and cannot tell which end went missing.
+  if (!from) throw new Error('aimedDrag: no source point (the piece is not drawn / off screen)');
+  if (!to) throw new Error('aimedDrag: no target point (the tile is not on screen)');
   const m = page.mouse;
   const anchor = await groundAnchor(page, to);
   await m.move(from.x, from.y);
@@ -407,7 +411,9 @@ export class Client {
       return x >= 0 && y >= 0 && x <= innerWidth && y <= innerHeight ? { x, y } : null;
     }, uid, at);
     let last = null;
-    for (const end = Date.now() + 2500; Date.now() < end; await sleep(80)) {
+    // a bench / hand unit's view is built on the next prep frame after the phase change; 2.5 s missed it on a busy
+    // machine (the loadout change makes the prep re-render), 8 s is still far below the test's own budget.
+    for (const end = Date.now() + 8000; Date.now() < end; await sleep(80)) {
       const p = await read();
       if (p && last && Math.abs(p.x - last.x) < 1.5 && Math.abs(p.y - last.y) < 1.5) return p;
       last = p;
