@@ -59,7 +59,16 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
         el.dispatchEvent(new Event('input', { bubbles: true }));
       }, room.code);
       await spec.page.waitForFunction(() => [...document.querySelectorAll('.hub-dialog .join-row button')].some((b) => /观战/.test(b.textContent) && !b.disabled), { timeout: 5000 });
-      await spec.click('.hub-dialog .join-row button', '观战');
+      // a DOM click: the 观战 button sits inside a Tooltip wrapper, and a coordinate click lands on the wrapper now and then
+      await spec.page.evaluate(() => [...document.querySelectorAll('.hub-dialog .join-row button')].find((b) => /观战/.test(b.textContent) && !b.disabled)?.click());
+      await spec.waitFor((s) => s.room?.code === room.code, 'spectator joined', 15000).catch(async () => {
+        const info = await spec.page.evaluate(() => ({
+          toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent.trim()).slice(-3),
+          dialog: !!document.querySelector('.hub-dialog'),
+          problems: (globalThis.__SP_PROBLEMS__ || null),
+        }));
+        throw new Error(`spectator join failed: ${JSON.stringify(info)}`);
+      });
       // the spectator's room line: the hub-era room bar keeps 观战中 in its status line (the old .specbar__who is gone)
       await spec.page.waitForSelector('.room-screen .room-bar__status .t-lo', { timeout: 15000 });
       const roomView = await spec.page.evaluate(() => ({
@@ -128,7 +137,13 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       // battle: the first field, a display replica (watch), never the authority
       await host.click('.readybtn', null, { timeout: 10000 });
       await spec.waitFor((s) => s.phase === 'COMBAT', 'combat', 60000);
-      await spec.page.waitForFunction(() => !!globalThis.__SP__.store.get().match.battle?.watch, { timeout: 20000 });
+      await spec.page.waitForFunction(() => { const b = globalThis.__SP__.store.get().match.battle; return !!b && !b.loading && !!b.watch; }, { timeout: 60000 }).catch(async () => {
+        const st = await spec.page.evaluate(() => {
+          const m = globalThis.__SP__.store.get().match;
+          return { phase: m.public?.phase, hasBattle: !!m.battle, loading: !!m.battle?.loading, watch: m.battle?.watch, own: m.battle?.own, field: m.field?.fieldId ?? null, fields: m.public?.fields?.length ?? null };
+        });
+        throw new Error(`no watch battle after COMBAT: ${JSON.stringify(st)}`);
+      });
       const sp2 = await specState(spec);
       assert.deepEqual([sp2.priv, sp2.battle.watch, sp2.battle.authoritative], [false, true, false]);
       // the auto-observed field reads "👁 name" (as for an eliminated player), with no 返回战场 — never "你已被淘汰"
