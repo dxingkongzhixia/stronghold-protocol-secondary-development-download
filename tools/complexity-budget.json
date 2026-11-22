@@ -6,7 +6,6 @@
     "public/js/render/app.js::createFieldView": 509,
     "server/match/Match.js::constructor": 352,
     "tools/assets/plan.mjs::buildPlan": 337,
-    "tools/plugin.mjs::main": 321,
     "server/plugins/officialUnitBuilder.js::createOfficialUnitBuilders": 312
   }
 }
