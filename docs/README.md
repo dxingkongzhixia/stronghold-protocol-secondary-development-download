@@ -153,6 +153,7 @@
 | 决策记录 §0–§49 | [`MATCHMAKING.md`](MATCHMAKING.md) |
 | 评估过但暂不实现 | [`FUTURE-FEATURES.md`](FUTURE-FEATURES.md) |
 | 全部维护中文档（自动生成） | [`INDEX.md`](INDEX.md)（`npm run docs:index`；`npm run docs:check` 校验） |
+| 全部测试文件 / 分层的清单（自动生成） | [`TEST-INVENTORY.md`](TEST-INVENTORY.md)（`npm run test:inventory`；`docs:check` 与 `npm test` 校验） |
 | 部署日志（只追加） | [`DEPLOYS.md`](DEPLOYS.md) |
 | 已归档（不再维护） | [`HANDOVER-2026-10.md`](HANDOVER-2026-10.md) · [`HANDOFF-2026-11-18.md`](HANDOFF-2026-11-18.md) |
 
@@ -252,7 +253,7 @@
 
 ### 7.3 新增 / 移动文档的登记清单
 
-1. 在标题下加标记：`<!-- doc: role=… status=… -->`（role/status 取值见 `tools/docs-index.mjs`），然后 `npm run docs:index`；
+1. 在标题下加标记：`<!-- doc: role=… status=… -->`（role/status 取值见 `tools/docs-index.mjs`），然后 `npm run docs:index`（同时重建 `docs/INDEX.md` 与 `docs/TEST-INVENTORY.md`）；
 2. 本页 §2（放到正确的**能力**分组）与 §4（如果它取代或补充了某个话题）；
 3. [`QUERY-INDEX.md`](QUERY-INDEX.md)（至少一条「问题 → 文件」）；
 4. [`../AGENTS.md`](../AGENTS.md) §3 的速查表（如果是代理需要主动找到的）；
@@ -268,7 +269,7 @@
 | `test/docs-consistency.test.js` | 钉住的文档（`DESIGN` / `design/` / `history/` / `SIM` / `META` / `DATA` / 根 `README` / `DEPLOY` / `PLAYING`）的措辞与代码一致 |
 | `test/docs-paths.test.js` | 5 个入口文档里的路径（`ARCHITECTURE` / `CONTRIBUTING` / `QUERY-INDEX` / `PROJECT-STATE` / `TESTING` / `DEVELOPER` / `AI-AGENT`） |
 | `test/docs-mojibake.test.js` | 每个 `.md` 的编码 |
-| `test/docs-facts.test.js` | 命令 / 工具路径 / 版本一致 / 无孤儿 / `test/fast.list` / front-matter 与 `INDEX.md` 同步 |
+| `test/docs-facts.test.js` | 命令 / 工具路径 / 版本一致 / 无孤儿 / `test/fast.list` / front-matter 与 `INDEX.md` 同步 / `TEST-INVENTORY.md` 与代码同步 |
 
 ```bash
 node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js

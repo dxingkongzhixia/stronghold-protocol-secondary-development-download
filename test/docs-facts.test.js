@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { docsFiles, readMarker, renderIndex, ROLES, STATUSES } from '../tools/docs-index.mjs';
+import { renderInventory, OUT as INVENTORY } from '../tools/test-inventory.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -91,4 +92,11 @@ test('every maintained doc has a valid front-matter marker and docs/INDEX.md is 
   assert.deepEqual(bad, []);
   assert.equal(fs.readFileSync(path.join(ROOT, 'docs/INDEX.md'), 'utf8'), renderIndex(),
     'docs/INDEX.md is stale — run npm run docs:index');
+});
+
+test('the generated test inventory is fresh (code ⇄ docs)', () => {
+  const next = renderInventory();
+  assert.equal(fs.readFileSync(path.join(ROOT, INVENTORY), 'utf8'), next.text,
+    `${INVENTORY} is stale — run npm run test:inventory`);
+  assert.ok(next.files.length > 500, 'the inventory saw the suite');
 });

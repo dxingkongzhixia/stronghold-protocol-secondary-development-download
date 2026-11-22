@@ -69,6 +69,7 @@
 | [`docs/SIM.md`](SIM.md) | SIM.md — battle simulation engine reference (server/sim) | reference | current |
 | [`docs/SKINS.md`](SKINS.md) | 干员皮肤 (Operator skins) | reference | current |
 | [`docs/SPECIAL-UI.md`](SPECIAL-UI.md) | 特殊 UI 版本（参考） | reference | current |
+| [`docs/TEST-INVENTORY.md`](TEST-INVENTORY.md) | 测试清单（自动生成） | reference | reference |
 | [`docs/TESTING.md`](TESTING.md) | 测试系统（TESTING） | ops | current |
 | [`docs/TRUSTED-DEPLOY.md`](TRUSTED-DEPLOY.md) | Trusted 插件生产部署基线 | reference | current |
 | [`docs/UI-HUB.md`](UI-HUB.md) | 主界面：经典大厅与 Hub / Main interface: classic lobby and Hub | reference | current |
