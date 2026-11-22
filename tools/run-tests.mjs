@@ -15,7 +15,12 @@ const withGolden = process.argv.includes('--with-golden') || process.env.SP_TEST
 const concurrency = Math.max(1, Number(process.env.TEST_CONCURRENCY) || 4);
 const extra = process.argv.slice(2).filter((a) => a !== '--with-golden');
 const args = [
-  '--test', `--test-concurrency=${concurrency}`, ...extra,
+  '--test', `--test-concurrency=${concurrency}`,
+  // A single test over ten minutes is a hang until proven otherwise: fail it with its name instead of waiting forever.
+  // --test-force-exit is the backstop for the other hang shape: tests done, but a leaked server/browser keeps the
+  // process alive (seen with the browser E2E suites: one Chrome spinning, node idle at 2 s CPU for ~55 min).
+  '--test-timeout=600000', '--test-force-exit',
+  ...extra,
   'test/**/*.test.js', 'test/e2e/coop.e2e.mjs', 'plugins/_template/**/*.test.js',
 ];
 const env = withGolden ? process.env : { ...process.env, SP_SKIP_GOLDEN: '1' };

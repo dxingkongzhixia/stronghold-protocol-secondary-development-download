@@ -68,7 +68,7 @@ if (isMain) {
   console.log(`[browser-smoke] Chrome ${chrome}`);
   for (const args of RUNS) {
     console.log(`[browser-smoke] node --test ${args.join(' ')}`);
-    const r = spawnSync(process.execPath, ['--test', ...args], { stdio: 'inherit', cwd: ROOT, env });
+    const r = spawnSync(process.execPath, ['--test', '--test-timeout=600000', '--test-force-exit', ...args], { stdio: 'inherit', cwd: ROOT, env });
     if (r.status !== 0) process.exit(r.status ?? 1);
   }
   console.log('[browser-smoke] ok');

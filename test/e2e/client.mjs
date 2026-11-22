@@ -231,7 +231,11 @@ export class Client {
     await page.setViewport({ width: this.w, height: this.h });
     // Tests drive the game, not the first-visit art-mode modal: choose stream before any app script runs.
     await page.evaluateOnNewDocument(() => {
-      try { globalThis.localStorage?.setItem('sp.pref.assetMode', JSON.stringify('stream')); } catch { /* ignore */ }
+      try {
+        globalThis.localStorage?.setItem('sp.pref.assetMode', JSON.stringify('stream'));
+        // the 干员调配 list view (the product default is the deck, 2026-10-13): the legacy selectors are the roster rows
+        globalThis.localStorage?.setItem('sp.pref.loadout.view', JSON.stringify('list'));
+      } catch { /* ignore */ }
     });
     page.on('console', (m) => {
       if (m.type() === 'error') this.problems.push(`console: ${m.text()} @ ${m.location()?.url || ''}`);

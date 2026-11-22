@@ -37,6 +37,7 @@ export async function openApp(browser, { base, name = '测试博士', viewport =
       localStorage.setItem('sp.pref.lang', JSON.stringify(lang));
       localStorage.setItem('sp.pref.settings', JSON.stringify({ textSize }));
       localStorage.setItem('sp.pref.assetMode', JSON.stringify(assetMode)); // belt and braces with ?e2e=1
+      localStorage.setItem('sp.pref.loadout.view', JSON.stringify('list')); // the roster rows the tests' selectors use
       if (entered) sessionStorage.setItem('sp.entered', '1');
     } catch { /* private mode */ }
   }, name, entered, lang, textSize, assetMode);

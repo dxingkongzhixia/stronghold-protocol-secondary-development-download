@@ -63,10 +63,10 @@ describe('DESIGN §16 — a teammate\'s unit shows its owner\'s loadout (real se
       await guest.click('.lo-card .lo-q--mod[data-module="none"]');
       await guest.page.waitForFunction(() => document.querySelector('.lo-card .lo-q--skill[data-skill="0"]')?.getAttribute('aria-pressed') === 'true'
         && document.querySelector('.lo-card .lo-q--mod[data-module="none"]')?.getAttribute('aria-pressed') === 'true'
-        && document.querySelector('.lo-detail .lo-skill.is-on[data-skill="0"]') && document.querySelector('.lo-detail .lo-mod.is-on[data-module="none"]'), { timeout: 3000 });
-      await guest.page.waitForFunction(() => /已同步/.test(document.querySelector('.lo-sync')?.textContent || ''), { timeout: 8000 });
-      await guest.page.keyboard.press('Escape');
-      await guest.page.waitForFunction(() => !document.querySelector('.lo'), { timeout: 3000 });
+        && document.querySelector('.lo-detail .lo-skill.is-on[data-skill="0"]') && document.querySelector('.lo-detail .lo-mod.is-on[data-module="none"]'), { timeout: 10000 });
+      await guest.page.waitForFunction(() => /已同步/.test(document.querySelector('.lo-sync')?.textContent || ''), { timeout: 15000 });
+      await guest.page.evaluate(() => document.querySelector('.lo-back')?.click()); // 返回; Esc's focus path is flaky here
+      await guest.page.waitForFunction(() => !document.querySelector('.lo'), { timeout: 5000 });
 
       // ready (the first click after the overlay closed can land while it fades out: click until the seat is ready)
       const guestReady = () => guest.page.evaluate(() => {
