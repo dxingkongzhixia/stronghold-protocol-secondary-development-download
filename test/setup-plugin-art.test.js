@@ -101,8 +101,8 @@ test('art discovery caps distinct table-backed operators across plugins, after d
 
 test('full setup and dedicated operator extraction both obey explicit art consent', async t => {
   const source = fs.readFileSync(new URL('../tools/setup.mjs', import.meta.url), 'utf8');
-  const start = source.indexOf('  const local = checkLocal();', source.indexOf('async function main()'));
-  const end = source.indexOf('  // 7. official battlefield scenes', start);
+  const start = source.indexOf('const local = checkLocal();', source.indexOf('async function main()'));
+  const end = source.indexOf('return artRefresh;', start);
   assert.ok(start > 0 && end > start);
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const cases = [

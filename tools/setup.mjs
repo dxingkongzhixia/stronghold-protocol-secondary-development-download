@@ -790,240 +790,262 @@ async function main() {
   }
   add('ok', 'Node.js', `v${node.version}${node.recommended ? '' : '（可用；推荐 22 / 24 LTS）'}`);
 
-  // 2. npm dependencies
-  let deps = checkDeps();
-  if (!deps.ok && !opts.check) {
-    log(`\n${c.cyan('▶')} 安装依赖（npm ci）…`);
-    const npm = npmCommand();
-    let r = run(npm.cmd, [...npm.pre, 'ci', '--no-audit', '--no-fund'], { shell: npm.shell });
-    if (!r.ok) {
-      log(c.warn('  npm ci 失败，改用 npm install …'));
-      r = run(npm.cmd, [...npm.pre, 'install', '--no-audit', '--no-fund'], { shell: npm.shell });
+  ensureEnvironment();
+
+  const artRefresh = await installLocalClient();
+
+  // 7. official battlefield scenes (optional; the full zip ships them, a lite / source install may fetch them)
+  await installScenes();
+  if (artRefresh) summary[artRefresh.index] = artRowAfterScenes(summary[artRefresh.index], checkLocal(), artRefresh);
+
+  /** Steps 2–5: npm dependencies, vendor, data, assets (mutates summary / fatal). */
+  function ensureEnvironment() {
+    // 2. npm dependencies
+    let deps = checkDeps();
+    if (!deps.ok && !opts.check) {
+      log(`\n${c.cyan('▶')} 安装依赖（npm ci）…`);
+      const npm = npmCommand();
+      let r = run(npm.cmd, [...npm.pre, 'ci', '--no-audit', '--no-fund'], { shell: npm.shell });
+      if (!r.ok) {
+        log(c.warn('  npm ci 失败，改用 npm install …'));
+        run(npm.cmd, [...npm.pre, 'install', '--no-audit', '--no-fund'], { shell: npm.shell });
+      }
+      deps = checkDeps();
     }
-    deps = checkDeps();
-  }
-  if (deps.ok) add('ok', '依赖 node_modules');
-  else { add('err', '依赖 node_modules', `缺少 ${deps.missing.join(', ')} → 运行 npm install`); fatal = true; }
+    if (deps.ok) add('ok', '依赖 node_modules');
+    else { add('err', '依赖 node_modules', `缺少 ${deps.missing.join(', ')} → 运行 npm install`); fatal = true; }
 
-  // 3. vendor
-  let vendor = checkVendor();
-  if (!vendor.ok && deps.ok && !opts.check) {
-    log(`\n${c.cyan('▶')} 复制前端库到 public/vendor …`);
-    run(process.execPath, [path.join(ROOT, 'tools', 'vendor.mjs')]);
-    vendor = checkVendor();
-  }
-  if (vendor.ok) add('ok', '前端库 public/vendor', vendor.optionalMissing.length ? '（three.js 缺失：3D 棋盘回退为 2D）' : '');
-  else { add('err', '前端库 public/vendor', `缺少 ${vendor.missing.join(', ')} → 运行 node tools/vendor.mjs`); fatal = true; }
+    // 3. vendor
+    let vendor = checkVendor();
+    if (!vendor.ok && deps.ok && !opts.check) {
+      log(`\n${c.cyan('▶')} 复制前端库到 public/vendor …`);
+      run(process.execPath, [path.join(ROOT, 'tools', 'vendor.mjs')]);
+      vendor = checkVendor();
+    }
+    if (vendor.ok) add('ok', '前端库 public/vendor', vendor.optionalMissing.length ? '（three.js 缺失：3D 棋盘回退为 2D）' : '');
+    else { add('err', '前端库 public/vendor', `缺少 ${vendor.missing.join(', ')} → 运行 node tools/vendor.mjs`); fatal = true; }
 
-  // 4. data
-  const data = checkData();
-  if (data.ok) add('ok', '游戏数据 data/*.json');
-  else {
-    add('err', '游戏数据 data/*.json', [data.missing.length && `缺少 ${data.missing.join(', ')}`, data.broken.length && `无法解析 ${data.broken.join(', ')}`].filter(Boolean).join('；') + ' → git checkout -- data/ 或 node tools/build-data.mjs');
-    if (data.missing.some((n) => n !== 'assets' && n !== 'emotes') || data.broken.length > 0) fatal = true;
+    // 4. data
+    const data = checkData();
+    if (data.ok) add('ok', '游戏数据 data/*.json');
+    else {
+      add('err', '游戏数据 data/*.json', [data.missing.length && `缺少 ${data.missing.join(', ')}`, data.broken.length && `无法解析 ${data.broken.join(', ')}`].filter(Boolean).join('；') + ' → git checkout -- data/ 或 node tools/build-data.mjs');
+      if (data.missing.some((n) => n !== 'assets' && n !== 'emotes') || data.broken.length > 0) fatal = true;
+    }
+
+    // 5. assets
+    let assets = checkAssets();
+    if (!opts.assets) add(assets.ok ? 'ok' : 'skip', '美术/音频 public/assets', assets.ok ? `${assets.total} 个文件` : '已跳过（--no-assets）');
+    else if (!assets.ok && deps.ok && !opts.check) {
+      const what = !assets.present ? `首次下载约 ${assets.bytes ? mb(assets.bytes) : ART_DOWNLOAD_FALLBACK}，可随时中断，重新运行会续传`
+        : `补全缺失的 ${assets.missing} 个文件`;
+      log(`\n${c.cyan('▶')} 下载美术与音频素材（${what}）…`);
+      const r = run(process.execPath, [path.join(ROOT, 'tools', 'fetch-assets.mjs'), `--asset-source=${opts.source}`]);
+      assets = checkAssets();
+      if (!r.ok && !assets.ok) log(c.warn('  素材下载未完成（网络问题？）。游戏仍可运行（使用占位图），稍后重新运行 setup 即可续传。'));
+    }
+    if (opts.assets) {
+      if (assets.ok) add('ok', '美术/音频 public/assets', `${assets.total} 个文件`);
+      else if (!assets.present) add('warn', '美术/音频 public/assets', '未下载（游戏会用占位图）→ node tools/fetch-assets.mjs');
+      else add('warn', '美术/音频 public/assets', `缺 ${assets.missing}/${assets.total} 个文件 → 重新运行 setup 续传`);
+    }
   }
 
-  // 5. assets
-  let assets = checkAssets();
-  if (!opts.assets) add(assets.ok ? 'ok' : 'skip', '美术/音频 public/assets', assets.ok ? `${assets.total} 个文件` : '已跳过（--no-assets）');
-  else if (!assets.ok && deps.ok && !opts.check) {
-    const what = !assets.present ? `首次下载约 ${assets.bytes ? mb(assets.bytes) : ART_DOWNLOAD_FALLBACK}，可随时中断，重新运行会续传`
-      : `补全缺失的 ${assets.missing} 个文件`;
-    log(`\n${c.cyan('▶')} 下载美术与音频素材（${what}）…`);
-    const r = run(process.execPath, [path.join(ROOT, 'tools', 'fetch-assets.mjs'), `--asset-source=${opts.source}`]);
-    assets = checkAssets();
-    if (!r.ok && !assets.ok) log(c.warn('  素材下载未完成（网络问题？）。游戏仍可运行（使用占位图），稍后重新运行 setup 即可续传。'));
-  }
-  if (opts.assets) {
-    if (assets.ok) add('ok', '美术/音频 public/assets', `${assets.total} 个文件`);
-    else if (!assets.present) add('warn', '美术/音频 public/assets', '未下载（游戏会用占位图）→ node tools/fetch-assets.mjs');
-    else add('warn', '美术/音频 public/assets', `缺 ${assets.missing}/${assets.total} 个文件 → 重新运行 setup 续传`);
-  }
-
-  // 6. local client (optional)
-  const local = checkLocal();
-  const state = loadState();
-  // §34.28: resolve art consent before a full run; its ordinary default-yes prompt is only for vanilla art.
-  const missingArt = checkPluginArt();
-  const artClient = opts.local === 'no' ? null : findClient(opts.game);
-  const artKey = missingArt.join(',');
-  let artAnswer = false;
-  if (missingArt.length && artClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginArtDeclined !== artKey) {
-    log(`Plugin operator art missing locally: ${missingArt.join(', ')}`);
-    artAnswer = await ask('Extract referenced official operator art from the local game now?', false);
-    if (artAnswer === false) saveState({ pluginArtDeclined: artKey });
-  }
-  const artAllowed = artClient && pluginFxExtractionAllowed(opts, missingArt, artAnswer);
-  // Manifest assessments are replaced after step 7 (a scene extract in this run must not leave the art row on warn).
-  let artRefresh = null;
-  const pushArt = (snap, tail, verb, hasClient) => {
-    add(localArtState(snap), '本地客户端美术（可选）', localArtDetail(snap, tail, verb, { client: hasClient }));
-    artRefresh = { index: summary.length - 1, tail, verb, client: hasClient };
-  };
-  if (opts.local === 'no') {
-    // [ASSUMED] --no-local still looks up a client so a scene-only gap names --scenes or the copy sentence. It does not extract.
-    const hinted = findClient(opts.game)?.autochess === true;
-    if (local.manifest) pushArt(local, '', '已提取', hinted);
-    else add('skip', '本地客户端美术（可选）', '已跳过（--no-local）');
-  } else {
-    const client = findClient(opts.game);
-    const already = local.manifest && local.dirPresent;
-    if (!client) {
-      if (already && local.board3d && !local.tiles && !opts.check) cropBoardTiles(log);
-      if (already) pushArt(local, local.board3d ? '，3D 棋盘可用' : '', '已提取', false);
-      else add('skip', '本地客户端美术（可选）', `${opts.game ? `找不到 ${opts.game}` : '未检测到本机明日方舟客户端'}：${LOCAL_ART_FALLBACK}（见 docs/DEPLOY.md 第 6 节）`);
-    } else if (!client.autochess) {
-      add(already ? localArtState(local) : 'warn', '本地客户端美术（可选）', `${client.kind} 客户端缺少卫戍协议资源（请在游戏内下载全部资源）：${client.path}${already ? localGaps(local, { client: false }) : ''}`);
-    } else if (already && opts.local !== 'force') {
-      if (local.board3d && !local.tiles && !opts.check) cropBoardTiles(log);
-      pushArt(local, local.board3d ? '，3D 棋盘可用' : '', '已提取', true);
-    } else if (opts.check) {
-      add('skip', '本地客户端美术（可选）', `检测到 ${client.kind} 客户端，可运行 node tools/setup.mjs --local 提取`);
+  /** Step 6 (optional): local-client art plus the plugin art/fx extraction. Returns the art row to refresh. */
+  async function installLocalClient() {
+    // 6. local client (optional)
+    const local = checkLocal();
+    const state = loadState();
+    // §34.28: resolve art consent before a full run; its ordinary default-yes prompt is only for vanilla art.
+    const missingArt = checkPluginArt();
+    const artClient = opts.local === 'no' ? null : findClient(opts.game);
+    const artKey = missingArt.join(',');
+    let artAnswer = false;
+    if (missingArt.length && artClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginArtDeclined !== artKey) {
+      log(`Plugin operator art missing locally: ${missingArt.join(', ')}`);
+      artAnswer = await ask('Extract referenced official operator art from the local game now?', false);
+      if (artAnswer === false) saveState({ pluginArtDeclined: artKey });
+    }
+    const artAllowed = artClient && pluginFxExtractionAllowed(opts, missingArt, artAnswer);
+    // Manifest assessments are replaced after step 7 (a scene extract in this run must not leave the art row on warn).
+    let artRefresh = null;
+    const pushArt = (snap, tail, verb, hasClient) => {
+      add(localArtState(snap), '本地客户端美术（可选）', localArtDetail(snap, tail, verb, { client: hasClient }));
+      artRefresh = { index: summary.length - 1, tail, verb, client: hasClient };
+    };
+    if (opts.local === 'no') {
+      // [ASSUMED] --no-local still looks up a client so a scene-only gap names --scenes or the copy sentence. It does not extract.
+      const hinted = findClient(opts.game)?.autochess === true;
+      if (local.manifest) pushArt(local, '', '已提取', hinted);
+      else add('skip', '本地客户端美术（可选）', '已跳过（--no-local）');
     } else {
-      const py = findPython();
-      if (!py) {
-        add('skip', '本地客户端美术（可选）', `检测到 ${client.kind} 客户端，但没有 Python 3.8+（${IS_WIN ? 'winget install Python.Python.3.12' : 'https://www.python.org/downloads/'}）`);
+      const client = findClient(opts.game);
+      const already = local.manifest && local.dirPresent;
+      if (!client) {
+        if (already && local.board3d && !local.tiles && !opts.check) cropBoardTiles(log);
+        if (already) pushArt(local, local.board3d ? '，3D 棋盘可用' : '', '已提取', false);
+        else add('skip', '本地客户端美术（可选）', `${opts.game ? `找不到 ${opts.game}` : '未检测到本机明日方舟客户端'}：${LOCAL_ART_FALLBACK}（见 docs/DEPLOY.md 第 6 节）`);
+      } else if (!client.autochess) {
+        add(already ? localArtState(local) : 'warn', '本地客户端美术（可选）', `${client.kind} 客户端缺少卫戍协议资源（请在游戏内下载全部资源）：${client.path}${already ? localGaps(local, { client: false }) : ''}`);
+      } else if (already && opts.local !== 'force') {
+        if (local.board3d && !local.tiles && !opts.check) cropBoardTiles(log);
+        pushArt(local, local.board3d ? '，3D 棋盘可用' : '', '已提取', true);
+      } else if (opts.check) {
+        add('skip', '本地客户端美术（可选）', `检测到 ${client.kind} 客户端，可运行 node tools/setup.mjs --local 提取`);
       } else {
-        let go = opts.local === 'force' || opts.yes;
-        if (go || !state.localDeclined) {
-          log(`\n${c.cyan('▶')} 检测到本机明日方舟客户端（${client.kind}）：\n  ${c.dim(client.path)}`);
-          log('  可以从中提取官方 3D 棋盘贴图、界面图标等（仅本机使用；通常 1–5 分钟，Python 依赖约 40 MB，装在项目内的 .venv-extract）。');
-        }
-        let unattended = false;
-        if (!go && !state.localDeclined) {
-          const answer = await ask('现在提取吗？', true);
-          if (answer === null) unattended = true; // no terminal (service, pipe): don't install Python packages unasked
-          else if (!answer) { saveState({ localDeclined: true }); log(c.dim('  已记住选择，之后不再询问；需要时运行 node tools/setup.mjs --local')); }
-          go = answer === true;
-        }
-        if (!go) add('skip', '本地客户端美术（可选）', unattended ? '无终端，未询问、未提取（需要时运行 node tools/setup.mjs --local）' : '已跳过（需要时运行 node tools/setup.mjs --local）');
-        else {
-          const venv = ensureVenv(py, log);
-          if (!venv.ok) add('warn', '本地客户端美术（可选）', venv.why);
+        const py = findPython();
+        if (!py) {
+          add('skip', '本地客户端美术（可选）', `检测到 ${client.kind} 客户端，但没有 Python 3.8+（${IS_WIN ? 'winget install Python.Python.3.12' : 'https://www.python.org/downloads/'}）`);
+        } else {
+          let go = opts.local === 'force' || opts.yes;
+          if (go || !state.localDeclined) {
+            log(`\n${c.cyan('▶')} 检测到本机明日方舟客户端（${client.kind}）：\n  ${c.dim(client.path)}`);
+            log('  可以从中提取官方 3D 棋盘贴图、界面图标等（仅本机使用；通常 1–5 分钟，Python 依赖约 40 MB，装在项目内的 .venv-extract）。');
+          }
+          let unattended = false;
+          if (!go && !state.localDeclined) {
+            const answer = await ask('现在提取吗？', true);
+            if (answer === null) unattended = true; // no terminal (service, pipe): don't install Python packages unasked
+            else if (!answer) { saveState({ localDeclined: true }); log(c.dim('  已记住选择，之后不再询问；需要时运行 node tools/setup.mjs --local')); }
+            go = answer === true;
+          }
+          if (!go) add('skip', '本地客户端美术（可选）', unattended ? '无终端，未询问、未提取（需要时运行 node tools/setup.mjs --local）' : '已跳过（需要时运行 node tools/setup.mjs --local）');
           else {
-            log(`  ${c.cyan('▶')} 提取中（python tools/local-extract/extract.py --game …）`);
-            const r = run(venv.python, [EXTRACT_PY, '--game', client.path, ...(artAllowed ? ['--plugin-art'] : [])], { env: PY_ENV });
-            if (r.ok) cropBoardTiles(log);
-            const after = checkLocal();
-            if (r.ok && after.manifest) { pushArt(after, after.board3d ? '，3D 棋盘可用' : '', '提取', true); saveState({ localDeclined: false, localExtractedFrom: client.path }); }
-            else add('warn', '本地客户端美术（可选）', `提取未成功（退出码 ${r.code}）：游戏照常运行，${LOCAL_ART_FALLBACK}；可稍后重试 node tools/setup.mjs --local`);
+            const venv = ensureVenv(py, log);
+            if (!venv.ok) add('warn', '本地客户端美术（可选）', venv.why);
+            else {
+              log(`  ${c.cyan('▶')} 提取中（python tools/local-extract/extract.py --game …）`);
+              const r = run(venv.python, [EXTRACT_PY, '--game', client.path, ...(artAllowed ? ['--plugin-art'] : [])], { env: PY_ENV });
+              if (r.ok) cropBoardTiles(log);
+              const after = checkLocal();
+              if (r.ok && after.manifest) { pushArt(after, after.board3d ? '，3D 棋盘可用' : '', '提取', true); saveState({ localDeclined: false, localExtractedFrom: client.path }); }
+              else add('warn', '本地客户端美术（可选）', `提取未成功（退出码 ${r.code}）：游戏照常运行，${LOCAL_ART_FALLBACK}；可稍后重试 node tools/setup.mjs --local`);
+            }
+          }
+        }
+      }
+    }
+    // [ASSUMED] --local includes used effects. A new plugin reference is a separate opt-in gap on update/startup.
+    const missingFx = checkPluginFx();
+    const fxClient = opts.local === 'no' ? null : findClient(opts.game);
+    const gapKey = missingFx.join(',');
+    let fxAnswer = false;
+    if (missingFx.length && fxClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginFxDeclined !== gapKey) {
+      log(`Plugin effects missing locally: ${missingFx.join(', ')}`);
+      fxAnswer = await ask('Extract referenced official effects from the local game now?', false);
+      if (fxAnswer === false) saveState({ pluginFxDeclined: gapKey });
+    }
+    if (fxClient && pluginFxExtractionAllowed(opts, missingFx, fxAnswer)) {
+      const py = findPython(), venv = py && ensureVenv(py, log);
+      if (venv?.ok) {
+        const r = run(venv.python, [EXTRACT_PY, '--game', fxClient.path, '--only', 'fx', '--fx-set', 'used'], { env: PY_ENV });
+        if (r.ok) saveState({ pluginFxDeclined: '' });
+      }
+    }
+    const fxAfter = checkLocal().fx;
+    add(fxAfter.state, '官方特效清单（可选）', fxAfter.detail);
+    const fxGap = checkPluginFx();
+    if (fxGap.length) add('warn', 'Plugin official effects', `Missing ${fxGap.join(', ')}; run node tools/setup.mjs --local with a local game install.`);
+
+    // Reuse the consent resolved before full extraction; retry only remaining operator gaps.
+    if (artAllowed && checkPluginArt().length) {
+      const py = findPython(), venv = py && ensureVenv(py, log);
+      if (venv?.ok) {
+        const r = run(venv.python, [EXTRACT_PY, '--game', artClient.path, '--only', 'plugin-art'], { env: PY_ENV });
+        if (r.ok) saveState({ pluginArtDeclined: '' });
+      }
+    }
+    const artGap = checkPluginArt();
+    if (artGap.length) add('warn', 'Plugin official operator art', `Missing ${artGap.join(', ')}; run node tools/setup.mjs --local with a local game install. Plugin artwork still takes priority.`);
+    return artRefresh;
+  }
+
+  /** Step 7 (optional): official battlefield scenes from the local client. */
+  async function installScenes() {
+    // Extract only when the plan allows it for this manifest.
+    if (opts.scenes !== 'no') {
+      const sceneLocal = checkLocal();
+      const sceneClient = findClient(opts.game);
+      const scenePy = findPython();
+      const clientFlag = sceneClient?.autochess ? true : (sceneClient ? 'incomplete' : false);
+      let decision = sceneInstallPlan({
+        hasScenes: sceneLocal.scenes,
+        sceneStagesHave: sceneLocal.sceneStagesHave,
+        sceneStagesExpected: sceneLocal.sceneStagesExpected,
+        sceneGroupHave: sceneLocal.sceneGroupHave,
+        missingSceneGroups: sceneLocal.missingSceneGroups,
+        sceneVersionStale: sceneLocal.sceneVersionStale,
+        sceneVersionHave: sceneLocal.sceneVersionHave,
+        sceneVersionExpected: sceneLocal.sceneVersionExpected,
+        client: clientFlag, python: !!scenePy, check: opts.check,
+        declined: !!loadState().sceneDeclined, force: opts.scenes === 'force', yes: opts.yes,
+      });
+      const filesPartial = sceneFilesPartial(sceneLocal);
+      const versionOnly = sceneVersionOnlyGap(sceneLocal);
+      if (decision.state === 'ask') {
+        if (filesPartial || versionOnly) log(`\n${c.cyan('▶')} ${decision.detail}`);
+        else {
+          log(`\n${c.cyan('▶')} 各战场的官方场景还没提取（${sceneLocal.sceneStagesExpected} 个战场；赛季场景包约 23 MB，贴图仍取自本机客户端）。`);
+          log('  下载并提取后，3D 棋盘按战场显示官方场景。没有提取依赖、下载失败或跳过时，仍用现在的金属地块。');
+        }
+        const answer = await ask('现在下载并提取吗？', sceneAskDefault(filesPartial || versionOnly));
+        const allow = sceneClientExtractAllowed({ partial: filesPartial, force: opts.scenes === 'force', yes: opts.yes, answer });
+        if (answer === null) decision = { run: false, state: 'skip', detail: '无终端，未询问、未提取战场场景。3D 棋盘用金属地块（需要时 node tools/setup.mjs --scenes）' };
+        else if (!allow) {
+          // A partial set (some scenes missing) never starts extract.py from this prompt.
+          // Enter, the timeout, and a typed yes do not. A version-only 否 is remembered here too.
+          if (answer) log(c.dim('  这一步不会从客户端提取。需要时运行 node tools/setup.mjs --scenes，或加上 --yes'));
+          else saveState({ sceneDeclined: true });
+          decision = answer
+            ? { run: false, state: 'warn', detail: decision.detail }
+            : { run: false, state: 'skip', detail: '已跳过战场场景（node tools/setup.mjs --scenes）。3D 棋盘用金属地块' };
+        } else decision = { run: true, state: 'ok', detail: decision.detail };
+      }
+      // Second gate: extract.py --only scene runs only when the plan's run is allowed for this manifest.
+      // filesPartial, not a version-only gap: a typed yes on the version prompt already set run.
+      const mayExtract = decision.run && sceneClientExtractAllowed({
+        partial: filesPartial, force: opts.scenes === 'force', yes: opts.yes, answer: true,
+      });
+      if (!mayExtract) add(decision.state === 'ok' ? 'ok' : decision.state, '各战场官方场景（可选）', decision.detail);
+      else {
+        const venv = ensureVenv(scenePy, log);
+        if (!venv.ok) add('warn', '各战场官方场景（可选）', `${venv.why}。3D 棋盘继续用金属地块`);
+        else {
+          log(`  ${c.cyan('▶')} 下载赛季场景包（python tools/local-extract/fetch_scenes.py，约 23 MB）`);
+          const fr = run(venv.python, [FETCH_SCENES_PY], { env: PY_ENV });
+          if (!fr.ok) add('warn', '各战场官方场景（可选）', `场景包下载未完成（退出码 ${fr.code}）。3D 棋盘继续用金属地块；稍后可重试 node tools/setup.mjs --scenes`);
+          else {
+            log(`  ${c.cyan('▶')} 提取战场场景（extract.py --only scene）`);
+            const er = run(venv.python, [EXTRACT_PY, '--game', sceneClient.path, '--only', 'scene'], { env: PY_ENV });
+            const afterScenes = checkLocal();
+            if (er.ok && afterScenes.scenes) {
+              add('ok', '各战场官方场景（可选）', '已提取；进入对局时按战场显示，没有的战场仍用金属地块');
+              saveState({ sceneDeclined: false });
+            } else add('warn', '各战场官方场景（可选）', `提取未成功（退出码 ${er.code}）。3D 棋盘继续用金属地块`);
           }
         }
       }
     }
   }
-  // [ASSUMED] --local includes used effects. A new plugin reference is a separate opt-in gap on update/startup.
-  const missingFx = checkPluginFx();
-  const fxClient = opts.local === 'no' ? null : findClient(opts.game);
-  const gapKey = missingFx.join(',');
-  let fxAnswer = false;
-  if (missingFx.length && fxClient && !opts.check && opts.local !== 'no' && opts.local !== 'force' && !opts.yes && state.pluginFxDeclined !== gapKey) {
-    log(`Plugin effects missing locally: ${missingFx.join(', ')}`);
-    fxAnswer = await ask('Extract referenced official effects from the local game now?', false);
-    if (fxAnswer === false) saveState({ pluginFxDeclined: gapKey });
-  }
-  if (fxClient && pluginFxExtractionAllowed(opts, missingFx, fxAnswer)) {
-    const py = findPython(), venv = py && ensureVenv(py, log);
-    if (venv?.ok) {
-      const r = run(venv.python, [EXTRACT_PY, '--game', fxClient.path, '--only', 'fx', '--fx-set', 'used'], { env: PY_ENV });
-      if (r.ok) saveState({ pluginFxDeclined: '' });
-    }
-  }
-  const fxAfter = checkLocal().fx;
-  add(fxAfter.state, '官方特效清单（可选）', fxAfter.detail);
-  const fxGap = checkPluginFx();
-  if (fxGap.length) add('warn', 'Plugin official effects', `Missing ${fxGap.join(', ')}; run node tools/setup.mjs --local with a local game install.`);
 
-  // Reuse the consent resolved before full extraction; retry only remaining operator gaps.
-  if (artAllowed && checkPluginArt().length) {
-    const py = findPython(), venv = py && ensureVenv(py, log);
-    if (venv?.ok) {
-      const r = run(venv.python, [EXTRACT_PY, '--game', artClient.path, '--only', 'plugin-art'], { env: PY_ENV });
-      if (r.ok) saveState({ pluginArtDeclined: '' });
+  /** The readiness summary; returns the process exit code. */
+  function printSummary() {
+    // summary
+    log(c.bold('\n── 准备情况 ──────────────────────────────'));
+    const width = Math.max(...summary.map((s) => displayWidth(s.label))) + 2;
+    for (const s of summary) log(`${mark[s.state]} ${padDisplay(s.label, width)}${s.detail ? c.dim(s.detail) : ''}`);
+    if (fatal) {
+      log(c.err('\n还不能启动：请先解决上面标 ✘ 的问题（node tools/doctor.mjs 可做更详细的诊断）。'));
+      return 1;
     }
+    if (!opts.quiet) {
+      log(`\n${c.ok('可以开始了：')} npm start   ${c.dim('（Windows 可直接双击 scripts\\start-windows.bat）')}`);
+      log(c.dim('浏览器打开 http://localhost:3000 ；同一局域网的朋友用终端里打印的 LAN 地址。'));
+    }
+    return fatal ? 1 : 0;
   }
-  const artGap = checkPluginArt();
-  if (artGap.length) add('warn', 'Plugin official operator art', `Missing ${artGap.join(', ')}; run node tools/setup.mjs --local with a local game install. Plugin artwork still takes priority.`);
 
-  // 7. official battlefield scenes (optional; the full zip ships them, a lite / source install may fetch them)
-  if (opts.scenes !== 'no') {
-    const sceneLocal = checkLocal();
-    const sceneClient = findClient(opts.game);
-    const scenePy = findPython();
-    const clientFlag = sceneClient?.autochess ? true : (sceneClient ? 'incomplete' : false);
-    let decision = sceneInstallPlan({
-      hasScenes: sceneLocal.scenes,
-      sceneStagesHave: sceneLocal.sceneStagesHave,
-      sceneStagesExpected: sceneLocal.sceneStagesExpected,
-      sceneGroupHave: sceneLocal.sceneGroupHave,
-      missingSceneGroups: sceneLocal.missingSceneGroups,
-      sceneVersionStale: sceneLocal.sceneVersionStale,
-      sceneVersionHave: sceneLocal.sceneVersionHave,
-      sceneVersionExpected: sceneLocal.sceneVersionExpected,
-      client: clientFlag, python: !!scenePy, check: opts.check,
-      declined: !!loadState().sceneDeclined, force: opts.scenes === 'force', yes: opts.yes,
-    });
-    const filesPartial = sceneFilesPartial(sceneLocal);
-    const versionOnly = sceneVersionOnlyGap(sceneLocal);
-    if (decision.state === 'ask') {
-      if (filesPartial || versionOnly) log(`\n${c.cyan('▶')} ${decision.detail}`);
-      else {
-        log(`\n${c.cyan('▶')} 各战场的官方场景还没提取（${sceneLocal.sceneStagesExpected} 个战场；赛季场景包约 23 MB，贴图仍取自本机客户端）。`);
-        log('  下载并提取后，3D 棋盘按战场显示官方场景。没有提取依赖、下载失败或跳过时，仍用现在的金属地块。');
-      }
-      const answer = await ask('现在下载并提取吗？', sceneAskDefault(filesPartial || versionOnly));
-      const allow = sceneClientExtractAllowed({ partial: filesPartial, force: opts.scenes === 'force', yes: opts.yes, answer });
-      if (answer === null) decision = { run: false, state: 'skip', detail: '无终端，未询问、未提取战场场景。3D 棋盘用金属地块（需要时 node tools/setup.mjs --scenes）' };
-      else if (!allow) {
-        // A partial set (some scenes missing) never starts extract.py from this prompt.
-        // Enter, the timeout, and a typed yes do not. A version-only 否 is remembered here too.
-        if (answer) log(c.dim('  这一步不会从客户端提取。需要时运行 node tools/setup.mjs --scenes，或加上 --yes'));
-        else saveState({ sceneDeclined: true });
-        decision = answer
-          ? { run: false, state: 'warn', detail: decision.detail }
-          : { run: false, state: 'skip', detail: '已跳过战场场景（node tools/setup.mjs --scenes）。3D 棋盘用金属地块' };
-      } else decision = { run: true, state: 'ok', detail: decision.detail };
-    }
-    // Second gate: extract.py --only scene runs only when the plan's run is allowed for this manifest.
-    // filesPartial, not a version-only gap: a typed yes on the version prompt already set run.
-    const mayExtract = decision.run && sceneClientExtractAllowed({
-      partial: filesPartial, force: opts.scenes === 'force', yes: opts.yes, answer: true,
-    });
-    if (!mayExtract) add(decision.state === 'ok' ? 'ok' : decision.state, '各战场官方场景（可选）', decision.detail);
-    else {
-      const venv = ensureVenv(scenePy, log);
-      if (!venv.ok) add('warn', '各战场官方场景（可选）', `${venv.why}。3D 棋盘继续用金属地块`);
-      else {
-        log(`  ${c.cyan('▶')} 下载赛季场景包（python tools/local-extract/fetch_scenes.py，约 23 MB）`);
-        const fr = run(venv.python, [FETCH_SCENES_PY], { env: PY_ENV });
-        if (!fr.ok) add('warn', '各战场官方场景（可选）', `场景包下载未完成（退出码 ${fr.code}）。3D 棋盘继续用金属地块；稍后可重试 node tools/setup.mjs --scenes`);
-        else {
-          log(`  ${c.cyan('▶')} 提取战场场景（extract.py --only scene）`);
-          const er = run(venv.python, [EXTRACT_PY, '--game', sceneClient.path, '--only', 'scene'], { env: PY_ENV });
-          const afterScenes = checkLocal();
-          if (er.ok && afterScenes.scenes) {
-            add('ok', '各战场官方场景（可选）', '已提取；进入对局时按战场显示，没有的战场仍用金属地块');
-            saveState({ sceneDeclined: false });
-          } else add('warn', '各战场官方场景（可选）', `提取未成功（退出码 ${er.code}）。3D 棋盘继续用金属地块`);
-        }
-      }
-    }
-  }
-  if (artRefresh) summary[artRefresh.index] = artRowAfterScenes(summary[artRefresh.index], checkLocal(), artRefresh);
-
-  // summary
-  log(c.bold('\n── 准备情况 ──────────────────────────────'));
-  const width = Math.max(...summary.map((s) => displayWidth(s.label))) + 2;
-  for (const s of summary) log(`${mark[s.state]} ${padDisplay(s.label, width)}${s.detail ? c.dim(s.detail) : ''}`);
-  if (fatal) {
-    log(c.err('\n还不能启动：请先解决上面标 ✘ 的问题（node tools/doctor.mjs 可做更详细的诊断）。'));
-    return 1;
-  }
-  if (!opts.quiet) {
-    log(`\n${c.ok('可以开始了：')} npm start   ${c.dim('（Windows 可直接双击 scripts\\start-windows.bat）')}`);
-    log(c.dim('浏览器打开 http://localhost:3000 ；同一局域网的朋友用终端里打印的 LAN 地址。'));
-  }
-  return 0;
+  return printSummary();
 }
 
 function isMain() {
