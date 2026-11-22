@@ -110,6 +110,8 @@ describe('DESIGN §16 — a teammate\'s unit shows its owner\'s loadout (real se
       assert.ok(piece, 'the elite 野鬃 is in the guest\'s hand');
       const tile = await guest.freeTileFor(piece.uid);
       assert.ok(tile, 'a legal tile');
+      // the field's canvas/fallback mounts after the prep screen's own async load; wait for it (the drag needs a view)
+      await guest.page.waitForSelector('.gm canvas, .gm .ff-piece', { timeout: 20000 }).catch(() => {});
       await guest.drag(await guest.piecePoint(piece.uid), await guest.tilePoint(tile.row, tile.col));
       await guest.page.waitForSelector('.fwheel__dia', { timeout: 4000 });
       await guest.swipe('RIGHT');
