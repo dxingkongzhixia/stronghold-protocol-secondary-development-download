@@ -18,10 +18,12 @@ export const BOOT_TIMEOUT_MS = Math.max(30000, Number(process.env.SP_E2E_BOOT_MS
 
 const CHROME_ARGS = ['--no-sandbox', '--no-first-run', '--autoplay-policy=no-user-gesture-required', '--disable-background-timer-throttling',
   '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--mute-audio', '--force-device-scale-factor=1',
-  // Headless Chrome has no GPU on CI/most servers; SwiftShader gives the field view its WebGL2 context instead of the 2D fallback.
-  '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
+  // Software WebGL only where there is no GPU (CI) or when asked: forcing SwiftShader on a desktop costs ~4.5× the CPU
+  // (measured: 51 CPU-s/10 s vs 11 with the RTX 4060). Headless Chrome picks the hardware backend by itself otherwise.
+  ...(process.env.CI === '1' || process.env.SP_GL === 'swiftshader'
+    ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : [])];
 /** The CDP protocol timeout of every Client's browser: one DevTools call that takes longer fails (a hung page fails fast). */
-export const PROTOCOL_TIMEOUT_MS = 90000;
+export const PROTOCOL_TIMEOUT_MS = 180000;
 
 /**
  * `page.waitForFunction` for a wait that may outlast PROTOCOL_TIMEOUT_MS. Puppeteer awaits the whole poll inside ONE

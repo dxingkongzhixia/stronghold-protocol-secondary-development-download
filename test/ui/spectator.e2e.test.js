@@ -32,7 +32,7 @@ const specState = (c) => c.page.evaluate(() => {
 
 describe('spectator seats (community report #26, real server)', { skip: !ENABLED && 'set SP_E2E=1 (Chrome + public/assets)' }, () => {
   test('观战 from the lobby → 观战席 in the room → the match: watching only, no private view, resume, 离开观战', { timeout: 6 * 60 * 1000 }, async () => {
-    const srv = await startRealServer({ fast: { timerScale: 1, combatSpeed: 4, startRound: 1, kit: 3, autoPlace: true } });
+    const srv = await startRealServer({ fast: { timerScale: 1, combatSpeed: 1, startRound: 1, kit: 3, autoPlace: true } });
     const P = (await import('puppeteer-core')).default;
     const host = new Client(P, srv.base, 'host', { prefix: 'spectator' });
     const spec = new Client(P, srv.base, 'spec', { prefix: 'spectator', w: 1280, h: 720 });
@@ -142,8 +142,8 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       const sp2 = await specState(spec);
       assert.deepEqual([sp2.priv, sp2.battle.watch, sp2.battle.authoritative], [false, true, false]);
       // the auto-observed field reads "👁 name" (as for an eliminated player), with no 返回战场 — never "你已被淘汰"
-      // a pair field: the layer bar (vswitch) is the observer HUD; `.chud__observe` is the single-half variant
-      await spec.page.waitForSelector('.chud__layers', { timeout: 15000 });
+      // a normal (single-player) field: the observing pill; a pair field would show the `.chud__layers` vswitch
+      await spec.page.waitForSelector('.chud__observe', { timeout: 15000 });
       const hud = await spec.page.evaluate(() => ({
         text: document.querySelector('.chud')?.textContent || '',
         back: !!document.querySelector('.chud__back'),
