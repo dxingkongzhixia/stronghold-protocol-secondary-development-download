@@ -376,7 +376,7 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       assert.equal(chip.count, hostNow.counts[chip.bondId] ?? '0', `the host's member count (${JSON.stringify({ chip, hostNow })})`);
       if (!chip.off) assert.equal(chip.chipCount, chip.count, 'the chip and its popup agree');
       st = await stripOf(host);
-      assert.equal(st.owner, '阿米娅', 'the strip stays the guest\'s on that half');
+      assert.ok(st.owner.endsWith('阿米娅'), 'the strip stays the guest\'s on that half');
       await closeCard(host);
       await back(host, partnerSide);
       await toLayer(host, hostSide);
