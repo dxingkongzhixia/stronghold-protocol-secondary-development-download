@@ -27,6 +27,7 @@ Orientation first: [`AGENTS.md`](../AGENTS.md) / [`AI-AGENT.md`](AI-AGENT.md) (A
 | Two documents disagree — which one wins? Which doc owns this topic? | [`docs/README.md`](README.md) §4 (same topic, who wins) and §5 (authority order) |
 | I am adding or moving a doc — where must I register it? | [`docs/README.md`](README.md) §7.3 |
 | How do I run tests / where does a new test go / can I move golden / what are the CI jobs? | [`docs/TESTING.md`](TESTING.md) |
+| Why is the first load slow / how many requests and bytes / what are the FPS and bot-CPU budgets? | [`docs/PERFORMANCE.md`](PERFORMANCE.md) |
 | A test is red — is it me or a known flake? | [`docs/TESTING.md`](TESTING.md) §5 (known flakes) and §8 (triage) |
 | I just inherited this — where do I even start? | [`docs/DEVELOPER.md`](DEVELOPER.md) (human) / [`docs/AI-AGENT.md`](AI-AGENT.md) (AI) |
 | Where are the game rules, and which document wins? | [`docs/RULES.md`](RULES.md) → [`docs/DESIGN.md`](DESIGN.md) |

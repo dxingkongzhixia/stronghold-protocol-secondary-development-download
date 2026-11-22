@@ -74,6 +74,7 @@
 | 仓库地图 / 数据·素材流水线 / 测试运行 | [`DEVELOPMENT.md`](DEVELOPMENT.md) · [`DEV-GUIDE-ZH.md`](DEV-GUIDE-ZH.md)（中文长文） |
 | 战斗引擎（单位 / buff / 伤害 / 技能 / 职业） | [`SIM.md`](SIM.md) |
 | 对局与匹配引擎（回合 / 联防 / 视图） | [`META.md`](META.md) |
+| 性能 / 加载 / 帧率 / 启动 / bot CPU | [`PERFORMANCE.md`](PERFORMANCE.md) |
 | 数据生成与字段 | [`DATA.md`](DATA.md) |
 | 难度模型与测量 | [`BALANCE.md`](BALANCE.md) + `data/tuning.json` |
 

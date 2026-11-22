@@ -46,6 +46,7 @@
 | [`docs/NEW-OPERATOR.md`](NEW-OPERATOR.md) | 新增干员流程（自造干员） | reference | current |
 | [`docs/OUR-FEATURES.md`](OUR-FEATURES.md) | Our fork-only mechanisms (merge-critical) | decision | current |
 | [`docs/PACKS.md`](PACKS.md) | PACKS.md — content packs | reference | current |
+| [`docs/PERFORMANCE.md`](PERFORMANCE.md) | 性能与加载（PERFORMANCE） | ops | current |
 | [`docs/PLAYING.md`](PLAYING.md) | 玩法指南 | guide | current |
 | [`docs/PLUGIN-API.md`](PLUGIN-API.md) | Plugin API v1–v2 | spec | current |
 | [`docs/PLUGIN-BACKLOG.md`](PLUGIN-BACKLOG.md) | 插件问题与待办清单 | spec | current |

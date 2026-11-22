@@ -231,6 +231,7 @@ node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-path
 | 数据字段 / 生成 | `DATA.md`、`tools/build-data.mjs` |
 | 素材 / 提取 | `ASSETS.md` |
 | 测试（新增套件 / golden / CI / 排红灯） | `TESTING.md`（唯一入口）、`test/**`、`.github/workflows/ci.yml` |
+| 性能 / 加载 / 帧率 / 启动 / bot CPU | `PERFORMANCE.md`（唯一入口）；基线、预算与实施进度都在那里 |
 | 插件 | `PLUGIN-DEV-GUIDE.md` / `PLUGINS.md` / `PLUGIN-API.md` / `PLUGIN-DSL.md`（按改动层级） |
 | 插件内容集构建（性能 / 缓存 / 子进程 / 构建失败） | `PLUGIN-BUILD.md`（唯一归属）、`PLUGINS.md` §11、`DEPLOY.md` 的环境变量表 |
 | AI 座位 / bot 策略 / 每座位覆盖 / 外部 AI 与 LLM | `BOT-STRATEGIES.md`（注册表与内置策略）、`AGENT-SEATS.md`（Agent 席位：邀请接管 bot，生产接入）、`EXTERNAL-AI.md`（sp-ai/1、传输、安全边界，开发专用）、`AI-STRATEGY.md`（示例顾问打法，不改规则） |
