@@ -67,12 +67,13 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       // the spectator's room line: the hub-era room bar keeps 观战中 in its status line (the old .specbar__who is gone)
       await spec.page.waitForSelector('.room-screen .room-bar__status .t-lo', { timeout: 15000 });
       const roomView = await spec.page.evaluate(() => ({
+        right: [...document.querySelectorAll('.room-bar__right button')].map((b) => [b.textContent.trim(), b.className, b.disabled]),
         bar: document.querySelector('.room-bar__right .btn--xl')?.textContent || '',
         barDisabled: !!document.querySelector('.room-bar__right .btn--xl')?.disabled,
         status: document.querySelector('.room-bar__status')?.textContent || '',
         seats: [...document.querySelectorAll('.seat__name')].map((e) => e.textContent),
       }));
-      assert.match(roomView.bar, /观战中/);
+      assert.match(roomView.bar, /观战中/, JSON.stringify(roomView.right));
       assert.equal(roomView.barDisabled, true);
       assert.match(roomView.status, /观战中/);
       assert.ok(!roomView.seats.includes('阿米娅'), 'never in a player seat');
@@ -92,7 +93,8 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       // the match: a spectator is no player to wait for
       await host.click('.room-bar__right button', '开始模拟', { timeout: 20000 });
       for (const c of [host, spec]) await c.waitFor((s) => s.phase === 'INFO_CHECK', 'briefing', 30000);
-      assert.match(await spec.page.evaluate(() => document.querySelector('.brief__foot .btn--primary')?.textContent || ''), /观战中/);
+      await spec.page.waitForSelector('.brief__foot .btn--primary', { timeout: 10000 }); // the store's phase leads the render by a frame
+      assert.match(await spec.page.$eval('.brief__foot .btn--primary', (b) => b.textContent), /观战中/);
       await host.click('.brief__foot .btn--primary', '准备就绪');
       const t0 = Date.now();
       for (;;) {
