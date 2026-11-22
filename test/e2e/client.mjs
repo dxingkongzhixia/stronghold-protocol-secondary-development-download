@@ -248,6 +248,9 @@ export class Client {
     page.on('requestfailed', (r) => {
       const err = r.failure()?.errorText || '';
       if (err === 'net::ERR_ABORTED' && (r.resourceType() === 'media' || /\.(mp3|ogg|wav|m4a)(\?|$)/.test(r.url()))) return; // media element swaps
+      // a page that navigates / unmounts cancels its own in-flight fetches (the health poll, an image being swapped):
+      // an abort is a local cancellation, not a server failure — 4xx/5xx still fail below
+      if (err === 'net::ERR_ABORTED' && r.url().startsWith(this.base)) return;
       this.problems.push(`requestfailed: ${r.url()} ${err}`);
     });
     page.on('response', (r) => { if (r.status() >= 400) this.problems.push(`http ${r.status()}: ${r.url()}`); });

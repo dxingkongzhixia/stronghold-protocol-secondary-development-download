@@ -48,9 +48,12 @@ describe('spectator seats (community report #26, real server)', { skip: !ENABLED
       await spec.open();
       await spec.hookRequests();
       await spec.enter('阿米娅');
-      await spec.click('.join-row input');
+      // the hub's 加入同盟 tile opens the key dialog; 观战 sits beside 加入同盟
+      await spec.click('.hub-tile', '加入同盟');
+      await spec.page.waitForSelector('.hub-dialog .join-row input', { timeout: 10000 });
+      await spec.click('.hub-dialog .join-row input');
       await spec.page.keyboard.type(room.code);
-      await spec.click('.join-row button', '观战');
+      await spec.click('.hub-dialog .join-row button', '观战');
       await spec.page.waitForSelector('.room-screen .specbar__who.is-me', { timeout: 10000 });
       const roomView = await spec.page.evaluate(() => ({
         bar: document.querySelector('.room-bar__right .btn--xl')?.textContent || '',
