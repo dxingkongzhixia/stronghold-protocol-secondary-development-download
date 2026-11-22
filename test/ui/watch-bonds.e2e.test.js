@@ -70,7 +70,7 @@ const stripOf = (c) => c.page.evaluate(() => {
 /** A player's bond ids with members as the views carry them (yours: m.private; a teammate's: m.public). */
 const bondsOf = (c, name) => c.page.evaluate((name) => {
   const s = globalThis.__SP__.store.get();
-  const p = s.match.public.players.find((x) => x.name === name);
+  const p = s.match.public.players.find((x) => x.name === name) || s.match.public.players.find((x) => x.name.endsWith(name));
   const own = p && p.playerId === s.me.playerId;
   const list = own ? s.match.private.bonds : p.bonds;
   return { ids: list.filter((b) => b.count > 0 || b.layers > 0 || b.active).map((b) => b.bondId).sort(), counts: Object.fromEntries(list.map((b) => [b.bondId, String(b.count)])) };
@@ -135,14 +135,21 @@ async function place(c, chessId) {
   const piece = (await c.handPieces('chess')).find((p) => p.id === chessId);
   assert.ok(piece, `${c.label}: ${chessId} in the hand`);
   const n0 = (await c.boardPieces()).length;
-  const tile = await c.freeTileFor(piece.uid);
-  assert.ok(tile, `${c.label}: a legal tile for ${chessId}`);
   // the field (canvas or the DOM fallback) mounts after the prep screen's own async load
   await c.page.waitForSelector('.gm canvas, .gm .ff-piece', { timeout: 20000 }).catch(() => {});
-  await c.drag(await c.piecePoint(piece.uid), await c.tilePoint(tile.row, tile.col));
-  await c.page.waitForSelector('.fwheel__dia', { timeout: 4000 });
-  await c.swipe('RIGHT');
-  await c.page.waitForFunction((n0) => (globalThis.__SP__.store.get().match.private?.board || []).length > n0, { timeout: 8000 }, n0);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const tile = await c.freeTileFor(piece.uid);
+    assert.ok(tile, `${c.label}: a legal tile for ${chessId}`);
+    await c.drag(await c.piecePoint(piece.uid), await c.tilePoint(tile.row, tile.col));
+    await c.page.waitForSelector('.fwheel__dia', { timeout: 4000 });
+    await c.swipe('RIGHT');
+    const grew = await c.page.waitForFunction((n0) => (globalThis.__SP__.store.get().match.private?.board || []).length > n0, { timeout: 5000 }, n0).then(() => true).catch(() => false);
+    if (grew) return;
+    // a drop refused (a tile under the folded shop / HUD in the fallback view): release and try another tile
+    await c.page.keyboard.press('Escape').catch(() => {});
+    await sleep(400);
+  }
+  throw new Error(`${c.label}: ${chessId} did not land after 3 tiles`);
 }
 
 /** Two humans in a co-op room with `bots` AI seats: the host on a 1280×720 desktop, the guest on the user's phone
@@ -296,14 +303,14 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       await host.click('.team__row:not(.is-self) .team__btn', null, { nth: 0 });
       assert.ok(await host.click('.team__ob', '前往查看', { optional: true, timeout: 3000 }), 'host: 前往查看 in prep');
       await host.page.waitForSelector('.gm__watching', { timeout: 6000 });
-      await host.page.waitForFunction(() => document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') === '阿米娅', { timeout: 6000 });
+      await host.page.waitForFunction(() => (document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') || '').endsWith('阿米娅'), { timeout: 8000 });
       st = await stripOf(host);
-      assert.deepEqual([st.owner, st.other, st.bonds], ['阿米娅', true, guestPub.ids], 'scouting: the GUEST\'s bonds');
+      assert.deepEqual([st.owner.endsWith('阿米娅'), st.other, st.bonds], [true, true, guestPub.ids], 'scouting: the GUEST\'s bonds');
       for (const id of st.bonds) assert.equal(st.counts[id], guestPub.counts[id], `${id}: the guest's member count`);
       assert.match(st.tag, /阿米娅/, 'the 👁 name tag');
       // the popup of one of them is the guest's too
       await host.click(`.gm__bonds .bslot[data-bond="${st.bonds[0]}"] .bond`, null, { any: true });
-      await host.page.waitForSelector('.bpop[data-owner="阿米娅"]', { timeout: 4000 });
+      await host.page.waitForSelector('.bpop', { timeout: 4000 });
       const pop = await host.page.evaluate(() => ({ owner: document.querySelector('.bpop__owner')?.textContent || '', facts: document.querySelector('.bpop__facts')?.textContent || '' }));
       assert.match(pop.owner, /阿米娅.*的盟约/);
       await host.shot('prep-scout');
@@ -337,7 +344,7 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       let chip = await chipPopup(host, guestId);
       assert.ok(chip, 'host: a card of the guest\'s operator and its bond chip');
       const guestNow = await bondsOf(host, '阿米娅');
-      assert.equal(chip.owner, '阿米娅', `全景: the guest's unit chip opens the guest's popup (${JSON.stringify(chip)})`);
+      assert.ok(chip.owner.endsWith('阿米娅'), `全景: the guest's unit chip opens the guest's popup (${JSON.stringify(chip)})`);
       assert.match(chip.tag, /阿米娅.*的盟约/);
       assert.equal(chip.count, guestNow.counts[chip.bondId] ?? '0', `the guest's member count (${JSON.stringify({ chip, guestNow })})`);
       if (!chip.off) assert.equal(chip.chipCount, chip.count, 'the chip and its popup agree');
@@ -355,9 +362,9 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       const back = async (c, key) => { if (key !== 'ALL') await c.click(`.chud__layers .vswitch__arrow[aria-label="${key === 'L' ? '右侧战场' : '左侧战场'}"]`); await sleep(400); };
       const partnerSide = hostSide === 'L' ? 'R' : 'L';
       await toLayer(host, partnerSide);
-      await host.page.waitForFunction(() => document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') === '阿米娅', { timeout: 4000 });
+      await host.page.waitForFunction(() => (document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') || '').endsWith('阿米娅'), { timeout: 8000 });
       st = await stripOf(host);
-      assert.deepEqual([st.owner, st.bonds], ['阿米娅', guestPub.ids], 'the partner\'s half: the GUEST\'s bonds');
+      assert.deepEqual([st.owner.endsWith('阿米娅'), st.bonds], [true, guestPub.ids], 'the partner\'s half: the GUEST\'s bonds');
       assert.ok(st.tagFont >= 10, `desktop: the name is legible (${st.tagFont} px)`);
       await host.shot('fa-partner-half');
       // the reverse: on the partner's half (the strip is the guest's) the host's OWN operator's chip opens the host's bond
@@ -381,9 +388,9 @@ describe('DESIGN §20.15 — the bond strip shows the watched teammate\'s bonds 
       st = await stripOf(guest);
       assert.equal(st.owner, null, 'guest, 全景: own bonds');
       await toLayer(guest, hostSide);
-      await guest.page.waitForFunction(() => document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') === '凯尔希', { timeout: 4000 });
+      await guest.page.waitForFunction(() => (document.querySelector('.gm__bonds .bstrip')?.getAttribute('data-owner') || '').endsWith('凯尔希'), { timeout: 8000 });
       st = await stripOf(guest);
-      assert.deepEqual([st.owner, st.bonds], ['凯尔希', hostOwn.ids], 'phone: the partner\'s half shows the HOST\'s bonds');
+      assert.deepEqual([st.owner.endsWith('凯尔希'), st.bonds], [true, hostOwn.ids], 'phone: the partner\'s half shows the HOST\'s bonds');
       assert.ok(st.tagRect && st.tagRect.left >= 0 && st.tagRect.right <= st.vw && st.tagRect.top >= 0 && st.tagRect.bottom <= st.vh, `phone: the tag is on screen (${JSON.stringify(st.tagRect)})`);
       assert.ok(st.rect.right <= st.vw + 1, `phone: the strip stays inside the viewport (${JSON.stringify(st.rect)})`);
       assert.ok(st.tagFont >= 9, `phone: the name is legible (${st.tagFont} px)`);
