@@ -1286,191 +1286,7 @@ export function planForgeImport(files, { id: idOverride, contentId, dataDir, van
     importedAssets.push(`${[...container, key, ...field].join('.')} ← ${skel.src}`);
   };
 
-  const art = isObj(pack.art) ? pack.art : {};
-  if (isObj(art.chars)) for (const [key, rec] of Object.entries(art.chars)) {
-    if (!isObj(rec)) continue;
-    for (const field of CHAR_FIELDS) if (typeof rec[field] === 'string') putImage(['chars'], key, [field], rec[field]);
-    if (isObj(rec.spine)) {
-      if (isObj(rec.spine.front)) putSpine(['chars'], key, ['spine', 'front'], rec.spine.front);
-      if (isObj(rec.spine.back)) putSpine(['chars'], key, ['spine', 'back'], rec.spine.back);
-    }
-    for (const k of Object.keys(rec)) if (!CHAR_FIELDS.has(k) && k !== 'spine') skip(`art.chars.${key}.${k}`, '外观叠加没有这个立绘字段（可用的：avatar、avatarE2、portrait、portraitE2、illust、spine），没有导入。', 'The cosmetic overlay takes no such portrait field (it has avatar, avatarE2, portrait, portraitE2, illust and spine), so it was not imported.');
-  }
-  if (isObj(art.enemies)) for (const [key, rec] of Object.entries(art.enemies)) {
-    if (!isObj(rec)) continue;
-    if (typeof rec.icon === 'string') putImage(['enemies'], key, ['icon'], rec.icon);
-    if (isObj(rec.spine)) putSpine(['enemies'], key, ['spine'], rec.spine);
-  }
-  if (isObj(art.tokens)) for (const [key, rec] of Object.entries(art.tokens)) {
-    if (!isObj(rec)) continue;
-    if (typeof rec.avatar === 'string') putImage(['tokens'], key, ['avatar'], rec.avatar);
-    if (isObj(rec.spine)) putSpine(['tokens'], key, ['spine'], rec.spine);
-    if (rec.owner != null) skip(`art.tokens.${key}.owner`, 'token 的 owner 不是素材，没有导入。', 'A token\'s owner is not an asset, so it was not imported.');
-  }
-  const flatArt = { skills: ['skills'], bonds: ['bonds'], bands: ['bands'], items: ['items'], modules: ['modules'], ui: ['ui'], profSub: ['prof', 'sub'] };
-  for (const [table, container] of Object.entries(flatArt)) {
-    if (!isObj(art[table])) continue;
-    for (const [key, rel] of Object.entries(art[table])) if (typeof rel === 'string') putImage(container, key, null, rel);
-  }
-  if (isObj(pack.bondIcons)) {
-    for (const [key, rel] of Object.entries(pack.bondIcons)) {
-      if (isObj(art.bonds) && has(art.bonds, key)) { skip(`bondIcons.${key}`, '同一个盟约已经在 art.bonds 里，bondIcons 这一条没有再导入。', 'That bond is already in art.bonds, so this bondIcons entry was not imported again.'); continue; }
-      if (typeof rel === 'string') putImage(['bonds'], key, null, rel);
-    }
-  }
-  if (isObj(pack.itemIcons)) for (const [key, rel] of Object.entries(pack.itemIcons)) if (typeof rel === 'string') putImage(['items'], key, null, rel);
-
-  const putVoices = (table, container, block) => {
-    if (!isObj(block)) return;
-    for (const [charId, lines] of Object.entries(block)) {
-      if (!isObj(lines)) continue;
-      for (const [slot, rel] of Object.entries(lines)) {
-        if (!VOICE_SLOT.test(slot)) { skip(`${table}.${charId}.${slot}`, '语音槽位名字不符合规则，没有导入。', 'The voice-slot name does not match the rule, so it was not imported.'); continue; }
-        putAudio(container, charId, slot, rel);
-      }
-    }
-  };
-  if (pack.voices != null) {
-    assume('voices-jp', 'Forge 的 voices 是默认配音，文档写的是日文，所以写入 audio.voiceJp。', 'Forge voices are the default dub, documented as Japanese, so they were written to audio.voiceJp.');
-    putVoices('voices', ['audio', 'voiceJp'], pack.voices);
-    rewrittenAssets.push('voices → audio.voiceJp');
-  }
-  if (isObj(pack.voiceLangs)) {
-    for (const [lang, block] of Object.entries(pack.voiceLangs)) {
-      const code = canonicalLang(lang);
-      // the dubs with a table here (round 40, DESIGN §32.14.11): 中文 audio.voice, 日本語 voiceJp, English voiceEn, 한국어 voiceKr
-      const tree = code === 'zh' || code === 'cn' ? 'voice' : code === 'ja' || code === 'jp' ? 'voiceJp' : code === 'en' ? 'voiceEn'
-        : code === 'ko' || code === 'kr' ? 'voiceKr' : null;
-      if (tree === 'voice') {
-        assume('voice-cn', 'voiceLangs.cn 写入 audio.voice（中文配音）。', 'voiceLangs.cn was written to audio.voice (the Chinese dub).');
-        putVoices(`voiceLangs.${lang}`, ['audio', 'voice'], block);
-        rewrittenAssets.push(`voiceLangs.${lang} → audio.voice`);
-      } else if (tree) {
-        putVoices(`voiceLangs.${lang}`, ['audio', tree], block);
-        rewrittenAssets.push(`voiceLangs.${lang} → audio.${tree}`);
-      } else skip(`voiceLangs.${lang}`, '这一档配音没有对应的语音表（只有中文、日文、英文、韩文），没有导入。', 'There is no voice table for this dub (only Chinese, Japanese, English and Korean), so it was not imported.');
-    }
-  }
-  if (Array.isArray(pack.skins)) {
-    for (const skin of pack.skins) {
-      if (!isObj(skin) || typeof skin.charId !== 'string') { skip('skins', '一条时装没有 charId，没有导入。', 'A skin has no charId, so it was not imported.'); continue; }
-      // an outfit whose id is a skin key (docs/PLUGINS.md §9) is kept apart from the operator's own overlay: several
-      // outfits of one operator under their own keys. The 皮肤 picker lists that key (availableSkins) once the plugin
-      // is composed. An outfit with no usable id is folded onto that operator's one overlay and is not a picker row.
-      const key = typeof skin.id === 'string' && isSkinKey(skin.id) ? skin.id : null;
-      if (key) {
-        assume('skins-variants', 'Forge 的多套时装各自写进该干员的 skins 变体（键是时装 id）。外观插件叠到清单上之后，干员调配和自选详情的皮肤一栏会列出这个 id，玩家用 room.skins 穿上。', 'Each Forge outfit is written as that operator\'s own skins variant (keyed by the outfit\'s id). Once the cosmetic plugin is composed onto the manifest, the skin section in operator setup and the DIY detail lists that id, and the player wears it with room.skins.');
-        const name = typeof skin.name === 'string' ? skin.name.trim() : '';
-        if (name && [...name].length <= 64) setAt(assets, ['chars', skin.charId, 'skins', key, 'name'], name);
-        else if (name) skip(`skins.${key}.name`, '时装的显示名不在 1–64 字以内，没有写入。', 'The outfit\'s display name is not within 1–64 characters, so it was not written.');
-        if (isObj(skin.art)) {
-          for (const field of CHAR_FIELDS) if (typeof skin.art[field] === 'string') putFileAt(['chars', skin.charId, 'skins', key, field], skin.art[field]);
-          if (isObj(skin.art.spine?.front)) putSpine(['chars', skin.charId, 'skins'], key, ['spine', 'front'], skin.art.spine.front);
-        }
-      } else {
-        assume('skins', 'Forge 的时装没有能当皮肤键的 id，收成该干员的一份外观叠加，不会成为皮肤栏里的一行。', 'A Forge outfit has no id a skin key can use, so it was collapsed into one overlay of that operator and is not a row in the skin picker.');
-        if (isObj(skin.art)) {
-          for (const field of CHAR_FIELDS) if (typeof skin.art[field] === 'string') putImage(['chars'], skin.charId, [field], skin.art[field]);
-          if (isObj(skin.art.spine?.front)) putSpine(['chars'], skin.charId, ['spine', 'front'], skin.art.spine.front);
-        }
-      }
-      if (isObj(skin.voices)) putVoices(`skins.${skin.id || skin.charId}`, ['audio', 'voiceJp'], { [skin.charId]: skin.voices });
-    }
-  }
-
-  // BGM / sfx only when the path is clearly one of our track or sfx keys and the pack points at it.
-  const bgmKeys = new Set(['lobby', 'prep', 'combat', 'unite', 'boss']);
-  const maybeAudioTree = isObj(art.audio) ? art.audio : null;
-  if (isObj(maybeAudioTree?.bgm)) {
-    assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
-    for (const [key, rel] of Object.entries(maybeAudioTree.bgm)) {
-      if (!bgmKeys.has(key)) { skip(`art.audio.bgm.${key}`, '背景音乐只接受 lobby、prep、combat、unite、boss，没有导入。', 'Music only accepts lobby, prep, combat, unite and boss, so this was not imported.'); continue; }
-      const file = typeof rel === 'string' ? rel : isObj(rel) ? rel.loop : null;
-      const got = typeof file === 'string' ? takeMedia(files, used, file, 'audio') : null;
-      if (!got || got.error) { skip(`art.audio.bgm.${key}`, '音乐文件不在包里，没有导入。', 'The music file is not in the pack, so it was not imported.'); continue; }
-      setAt(assets, ['audio', 'bgm', key], { loop: got.dest });
-      remember(got.src, got.dest);
-      importedAssets.push(`audio.bgm.${key} ← ${got.src}`);
-    }
-  }
-  const putTrack = (at, rel, label) => {
-    const file = typeof rel === 'string' ? rel : isObj(rel) && typeof rel.loop === 'string' ? rel.loop : null;
-    if (!file) { skip(label, '音乐要是文件路径，或 { loop }，没有导入。', 'Music must be a file path or { loop }, so it was not imported.'); return false; }
-    const got = takeMedia(files, used, file, 'audio');
-    if (!got || got.error) { skip(label, '音乐文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The music file is missing, or it is not .mp3 / .ogg, so it was not imported.'); return false; }
-    const track = { loop: got.dest };
-    remember(got.src, got.dest);
-    if (isObj(rel) && typeof rel.intro === 'string') {
-      const intro = takeMedia(files, used, rel.intro, 'audio');
-      if (!intro || intro.error) skip(`${label}#intro`, 'intro 音轨不在包里，没有写入 intro。', 'The intro track is not in the pack, so intro was not written.');
-      else { track.intro = intro.dest; remember(intro.src, intro.dest); }
-    }
-    setAt(assets, at, track);
-    importedAssets.push(`${at.join('.')} ← ${got.src}`);
-    return true;
-  };
-  if (isObj(maybeAudioTree?.bossBgm)) {
-    assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
-    for (const [key, rel] of Object.entries(maybeAudioTree.bossBgm)) {
-      if (!isAssetKey(key)) { skip(`art.audio.bossBgm.${String(key).slice(0, 40)}`, 'boss 音乐的 id 不合规，没有导入。', 'The boss-music id is not a valid asset key, so it was not imported.'); continue; }
-      putTrack(['audio', 'bossBgm', key], rel, `art.audio.bossBgm.${key}`);
-    }
-  }
-  const sfxUnitAudio = new Set(['attack', 'hit', 'skill', 'die', 'born']);
-  const sfxUnitMaps = new Set(['skills', 'attacks', 'hits']);
-  if (isObj(maybeAudioTree?.sfx)) {
-    assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
-    for (const bucket of ['ui', 'battle']) {
-      const block = maybeAudioTree.sfx[bucket];
-      if (block == null) continue;
-      if (!isObj(block)) { skip(`art.audio.sfx.${bucket}`, '音效表不是对象，没有导入。', 'The sound table is not an object, so it was not imported.'); continue; }
-      for (const [key, rel] of Object.entries(block)) {
-        if (!isAssetKey(key) || typeof rel !== 'string') { skip(`art.audio.sfx.${bucket}.${String(key).slice(0, 40)}`, '音效要是一个 .mp3 / .ogg 路径，没有导入。', 'A sound must be one .mp3 / .ogg path, so it was not imported.'); continue; }
-        const got = takeMedia(files, used, rel, 'audio');
-        if (!got || got.error) { skip(`art.audio.sfx.${bucket}.${key}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
-        setAt(assets, ['audio', 'sfx', bucket, key], got.dest);
-        remember(got.src, got.dest);
-        importedAssets.push(`audio.sfx.${bucket}.${key} ← ${got.src}`);
-      }
-    }
-    if (maybeAudioTree.sfx.units != null && !isObj(maybeAudioTree.sfx.units)) skip('art.audio.sfx.units', '干员音效不是对象，没有导入。', 'Unit sounds are not an object, so they were not imported.');
-    if (isObj(maybeAudioTree.sfx.units)) {
-      for (const [id, rec] of Object.entries(maybeAudioTree.sfx.units)) {
-        if (!isAssetKey(id) || !isObj(rec)) { skip(`art.audio.sfx.units.${String(id).slice(0, 40)}`, '干员音效写得不对，没有导入。', 'This unit-sound entry is not usable, so it was not imported.'); continue; }
-        const out = {};
-        for (const [field, val] of Object.entries(rec)) {
-          if (sfxUnitAudio.has(field) && typeof val === 'string') {
-            const got = takeMedia(files, used, val, 'audio');
-            if (!got || got.error) { skip(`art.audio.sfx.units.${id}.${field}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
-            out[field] = got.dest;
-            remember(got.src, got.dest);
-          } else if (sfxUnitMaps.has(field) && isObj(val)) {
-            const map = {};
-            for (const [idx, rel] of Object.entries(val)) {
-              if (!/^\d{1,2}$/.test(idx) || typeof rel !== 'string') { skip(`art.audio.sfx.units.${id}.${field}.${String(idx).slice(0, 8)}`, '分组音效的序号必须是 0–99，值是一个音频路径，没有导入。', 'A grouped sound index must be 0–99 and its value one audio path, so it was not imported.'); continue; }
-              const got = takeMedia(files, used, rel, 'audio');
-              if (!got || got.error) { skip(`art.audio.sfx.units.${id}.${field}.${idx}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
-              map[idx] = got.dest;
-              remember(got.src, got.dest);
-            }
-            if (Object.keys(map).length) out[field] = map;
-          } else skip(`art.audio.sfx.units.${id}.${field}`, '这个音效字段对不上（只要 attack、hit、skill、die、born，或 skills / attacks / hits），没有导入。', 'This sound field does not match (attack, hit, skill, die, born, or skills / attacks / hits), so it was not imported.');
-        }
-        if (Object.keys(out).length) {
-          setAt(assets, ['audio', 'sfx', 'units', id], out);
-          importedAssets.push(`audio.sfx.units.${id}`);
-        }
-      }
-    }
-    for (const k of Object.keys(maybeAudioTree.sfx)) {
-      if (k !== 'ui' && k !== 'battle' && k !== 'units') skip(`art.audio.sfx.${k}`, '音效只接受 ui、battle、units，没有导入。', 'Sounds only accept ui, battle and units, so this was not imported.');
-    }
-  }
-  if (isObj(maybeAudioTree)) {
-    for (const k of Object.keys(maybeAudioTree)) {
-      if (k !== 'bgm' && k !== 'sfx' && k !== 'bossBgm') skip(`art.audio.${k}`, '这个音频字段对不上，没有导入。', 'This audio field does not match, so it was not imported.');
-    }
-  }
+  planForgeArt();
 
   const dataCache = new Map();
   const table = (name) => {
@@ -2285,486 +2101,713 @@ export function planForgeImport(files, { id: idOverride, contentId, dataDir, van
 
   // [ASSUMED] Only a whole new record that was not written counts. An official record left alone, a field note,
   // and a unit already imported as its chess pair do not. Effects are not one of these kinds.
-  const DROP_TABLE = { chess: 'operators', units: 'operators', bonds: 'bonds', bands: 'bands', items: 'items', tokens: 'tokens', garrisons: 'traits' };
-  for (const name of CONTENT_NAMES) {
-    let doc;
-    try { doc = loadTableFile(files, used, name); } catch (e) {
-      if (e instanceof ForgeImportError) throw e;
-      skip(`${name}.json`, '这个数据文件读不了，没有导入。', 'This data file could not be read, so it was not imported.', undefined, DROP_TABLE[name]);
-      continue;
-    }
-    if (!doc) {
-      if (declaredContent.includes(name)) skip(`content:${name}`, 'content 声明了这个文件，但包里没有对应的 JSON，没有导入。', 'content names this file, but the pack has no such JSON, so it was not imported.', undefined, DROP_TABLE[name]);
-      continue;
-    }
-    const past = numbersPastBound(doc);
-    if (past.length) {
-      const shown = past.slice(0, 8);
-      const tail = past.length > shown.length ? ` (+${past.length - shown.length})` : '';
-      skip(`${name}.json#number`, `这些数超出 ±${PLUGIN_LIMITS.number}，没有写进游戏数据。写进游戏数据的仍限 ±${PLUGIN_LIMITS.number}：技能 duration、spCost、initSp、maxChargeTime、increment，黑板，属性，price、sellPrice，补丁叶子。${shown.join('；')}${tail}`, `These numbers are outside ±${PLUGIN_LIMITS.number} and were not written into game data. Values that are written stay within ±${PLUGIN_LIMITS.number}: skill duration, spCost, initSp, maxChargeTime, increment, blackboards, stats, price, sellPrice, and patch leaves. ${shown.join('; ')}${tail}`);
-    }
-    const idField = name === 'units' ? 'charId' : name === 'enemies' ? 'key' : name === 'chess' ? 'chessId' : 'id';
-    const map = asMap(doc, idField);
-    /** @type {Map<string, any>} */
-    const newChess = new Map();
-    for (const [id, rec] of Object.entries(map)) {
-      if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
-      if (gameplay.handled.has(`${name}:${id}`)) continue;
-      const exists = name === 'units' ? !!(table('units') && has(table('units'), id)) : !!(table(name) && has(table(name), id));
-      const declared = overrideKeys.has(`${name}:${id}`);
-      if (exists) {
-        if (!declared) { skip(`${name}:${id}`, '这条官方记录没有写进 overrides，按 Forge 的规矩不能默默覆盖，没有导入。', 'This official record is not in overrides. Forge refuses a silent replace, so it was not imported.'); continue; }
-        if (!PATCH_TABLE[name] && name !== 'units') { skip(`${name}:${id}`, '这张表对不上我们的补丁文件，没有导入。', 'This table does not match a patch file of ours, so it was not imported.'); continue; }
-        patchRecord(name, id, rec);
-        continue;
-      }
-      if (name === 'chess') { newChess.set(id, rec); continue; }
-      if (name === 'units') { mapOperator(id, isObj(rec) ? { ...rec, charId: rec.charId || id } : rec); continue; }
-      if (name === 'tokens') packTokenIds.add(id);
-      if (name === 'enemies' && isObj(rec)) {
-        const baseId = typeof rec.base === 'string' ? rec.base : typeof rec.special === 'string' ? rec.special : '';
-        const enemies = table('enemies');
-        if (!baseId || !enemies || !has(enemies, baseId)) {
-          skip(`enemies:${id}`, '新敌人没有写一个本安装里存在的官方 base（或 special），不能凭空造一套技能，没有导入。', 'A new enemy has no official base (or special) that exists in this installation. A kit was not invented, so it was not imported.');
-          continue;
-        }
-        const eid = namespaced('enemy_x', recordNs, id, seenIds);
-        enemyIds.set(id, eid);
-        const set = {};
-        if (typeof rec.name === 'string' && rec.name.trim()) set.name = rec.name.trim().slice(0, 60);
-        const stats = finiteStats(rec.stats || rec, enemies[baseId]?.stats);
-        if (stats) set.stats = stats;
-        enemyRecords.push({ id: eid, base: baseId, ...(rec.special && rec.special !== baseId ? { special: rec.special } : {}), ...(Object.keys(set).length ? { set } : {}) });
-        importedData.push(`enemies:${id} → ${eid} (base ${baseId})`);
-        rewrittenData.push(`${id} → ${eid}`);
-        continue;
-      }
-      skip(`${name}:${id}`, '新记录没有安全的紧凑映射（模式不是 Forge 的表；其他表只自动导入带官方 base 的敌人、干员和成对的棋子，以及已有记录上类型不变的补丁）。', 'A new record has no safe compact mapping (Forge has no mode table; other tables only auto-import enemies with an official base, operators, chess pairs, and type-preserving patches of existing records).', undefined, DROP_TABLE[name]);
-    }
-    if (newChess.size) mapChessRecords(newChess);
-  }
-
-  // Chess overrides are planned before bond overrides. Compose membership onto the bond op when one exists, otherwise
-  // onto the official array. A result that equals the official list drops a redundant op. visibleMembers is edited
-  // only when that array already exists: an empty invented list would hide every other member in the catalogue.
-  if (bondEdits.size) {
-    const bondTable = table('bonds') || {};
-    const sameList = (a, b) => Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
-    for (const [bondId, edit] of bondEdits) {
-      const official = bondTable[bondId];
-      if (!isObj(official)) continue;
-      for (const field of ['members', 'visibleMembers']) {
-        const idx = patches.findIndex((op) => op && op.op === 'set' && op.file === 'bonds' && op.id === bondId && Array.isArray(op.path) && op.path.length === 1 && op.path[0] === field);
-        const existing = idx >= 0 ? patches[idx] : null;
-        const base = existing && Array.isArray(existing.value) ? existing.value.slice()
-          : Array.isArray(official[field]) ? official[field].slice() : null;
-        if (!base) continue;
-        const next = base.filter((m) => typeof m !== 'string' || !edit.remove.has(m));
-        for (const chessId of edit.add) {
-          if (!edit.remove.has(chessId) && !next.includes(chessId)) next.push(chessId);
-        }
-        if (sameList(next, official[field])) {
-          if (idx >= 0) patches.splice(idx, 1);
-        } else if (existing) existing.value = next;
-        else patches.push({ op: 'set', file: 'bonds', id: bondId, path: [field], value: next });
-      }
-    }
-  }
-
-  for (const [a, b] of skillIds) recordIds.set(a, b);
-  for (let i = 0; i < gameplayRecords.length; i++) gameplayRecords[i] = rewriteForgeIds(gameplayRecords[i], recordIds);
-  for (let i = 0; i < operators.length; i++) operators[i] = rewriteForgeIds(operators[i], recordIds);
-  for (let i = 0; i < patches.length; i++) patches[i] = rewriteForgeIds(patches[i], recordIds);
+  applyForgeRecords();
 
   // ---- kits/<id>.js → one sandboxed script plugin (Addition 3, round 43; forgeKits.js) --------------------------------
   /** @type {{ source: string, registered: { file: string, register: string, carried: string[], kind: string, label: string }[], mapped: string[], overrides: string[] } | null} */
-  let scriptPlan = null;
-  {
-    // file names go into the entry as comments, so only plain names are carried (helpers are checked by forgeKits.js)
-    const SAFE_KIT = /^[A-Za-z0-9_][A-Za-z0-9_./-]*\.js$/;
-    const named = [...files.keys()].filter((rel) => /^kits\/[^/]+\.js$/.test(rel) && !rel.slice(5).startsWith('_'));
-    const officialTarget = (stem) => {
-      const chessId = stem.replace(/_b$/, '_a');
-      if ((overrideKeys.has(`chess:${stem}`) || overrideKeys.has(`chess:${chessId}`)) && has(table('chess') || {}, chessId)) {
-        return { charId: chessId, label: chessId, kind: 'official', override: has(KITS, chessId) ? chessId : null };
+  const scriptPlan = planForgeScripts();
+
+  const translations = planForgeTranslations();
+
+  const { panels, manualPanels } = planForgePanels();
+
+  const assetNeed = finalizeForgeArt();
+
+  const { roles, contentI18n } = planForgeRoles();
+
+  const cosmeticBare = planForgeDroppedArt();
+
+  /** The pack's cosmetic declarations → the asset overlay, the media map and the skill/voice/spine entries. */
+  function planForgeArt() {
+    const art = isObj(pack.art) ? pack.art : {};
+    if (isObj(art.chars)) for (const [key, rec] of Object.entries(art.chars)) {
+      if (!isObj(rec)) continue;
+      for (const field of CHAR_FIELDS) if (typeof rec[field] === 'string') putImage(['chars'], key, [field], rec[field]);
+      if (isObj(rec.spine)) {
+        if (isObj(rec.spine.front)) putSpine(['chars'], key, ['spine', 'front'], rec.spine.front);
+        if (isObj(rec.spine.back)) putSpine(['chars'], key, ['spine', 'back'], rec.spine.back);
       }
-      if (overrideKeys.has(`units:${stem}`) && has(officialUnits(), stem)) return { charId: stem, label: stem, kind: 'official', override: has(KITS, stem) ? stem : null };
-      return null;
+      for (const k of Object.keys(rec)) if (!CHAR_FIELDS.has(k) && k !== 'spine') skip(`art.chars.${key}.${k}`, '外观叠加没有这个立绘字段（可用的：avatar、avatarE2、portrait、portraitE2、illust、spine），没有导入。', 'The cosmetic overlay takes no such portrait field (it has avatar, avatarE2, portrait, portraitE2, illust and spine), so it was not imported.');
+    }
+    if (isObj(art.enemies)) for (const [key, rec] of Object.entries(art.enemies)) {
+      if (!isObj(rec)) continue;
+      if (typeof rec.icon === 'string') putImage(['enemies'], key, ['icon'], rec.icon);
+      if (isObj(rec.spine)) putSpine(['enemies'], key, ['spine'], rec.spine);
+    }
+    if (isObj(art.tokens)) for (const [key, rec] of Object.entries(art.tokens)) {
+      if (!isObj(rec)) continue;
+      if (typeof rec.avatar === 'string') putImage(['tokens'], key, ['avatar'], rec.avatar);
+      if (isObj(rec.spine)) putSpine(['tokens'], key, ['spine'], rec.spine);
+      if (rec.owner != null) skip(`art.tokens.${key}.owner`, 'token 的 owner 不是素材，没有导入。', 'A token\'s owner is not an asset, so it was not imported.');
+    }
+    const flatArt = { skills: ['skills'], bonds: ['bonds'], bands: ['bands'], items: ['items'], modules: ['modules'], ui: ['ui'], profSub: ['prof', 'sub'] };
+    for (const [table, container] of Object.entries(flatArt)) {
+      if (!isObj(art[table])) continue;
+      for (const [key, rel] of Object.entries(art[table])) if (typeof rel === 'string') putImage(container, key, null, rel);
+    }
+    if (isObj(pack.bondIcons)) {
+      for (const [key, rel] of Object.entries(pack.bondIcons)) {
+        if (isObj(art.bonds) && has(art.bonds, key)) { skip(`bondIcons.${key}`, '同一个盟约已经在 art.bonds 里，bondIcons 这一条没有再导入。', 'That bond is already in art.bonds, so this bondIcons entry was not imported again.'); continue; }
+        if (typeof rel === 'string') putImage(['bonds'], key, null, rel);
+      }
+    }
+    if (isObj(pack.itemIcons)) for (const [key, rel] of Object.entries(pack.itemIcons)) if (typeof rel === 'string') putImage(['items'], key, null, rel);
+
+    const putVoices = (table, container, block) => {
+      if (!isObj(block)) return;
+      for (const [charId, lines] of Object.entries(block)) {
+        if (!isObj(lines)) continue;
+        for (const [slot, rel] of Object.entries(lines)) {
+          if (!VOICE_SLOT.test(slot)) { skip(`${table}.${charId}.${slot}`, '语音槽位名字不符合规则，没有导入。', 'The voice-slot name does not match the rule, so it was not imported.'); continue; }
+          putAudio(container, charId, slot, rel);
+        }
+      }
     };
-    /** @type {{ file: string, register: string, kind: string, label: string, override: string | null }[]} */
-    const jobs = [];
-    const taken = new Map();
-    for (const file of [...new Set([...explicitKits.keys(), ...named])].sort()) {
-      used.add(file);
-      const stem = file.split('/').pop().replace(/\.js$/, '');
-      if (!SAFE_KIT.test(file)) {
-        skip(file, '文件名里有字母、数字和 . _ - 以外的字符，转不成脚本插件；导入时不执行它。', 'The file name has characters other than letters, digits and . _ -, so it was not converted; the importer does not run it.', 'PLUGIN_FORGE_SCRIPT', 'kits');
-        continue;
-      }
-      const owner = explicitKits.get(file);
-      const target = owner ? { ...owner, kind: 'record', override: null } : recordTargets.has(stem) ? { ...recordTargets.get(stem), kind: 'record', override: null } : officialTarget(stem);
-      if (!target) {
-        const why = packTokenIds.has(stem)
-          ? ['这是召唤物（tokens）的 kit，当前脚本注册接口只支持干员；召唤物数据可导入，但这份 kit 没有转换，导入时不执行它。', 'This is a summon (tokens) kit. Token data can import, but the script registration surface supports operators only, so this kit was not converted; the importer does not run it.']
-          : [`文件名「${stem}」不是本包导入的棋子或干员，也不是 overrides 里声明的官方 id，转不成脚本插件；导入时不执行它。`, `The file name "${stem}" is not an imported chess or operator record of this pack, nor an official id the pack declares in overrides, so it was not converted; the importer does not run it.`];
-        skip(file, why[0], why[1], 'PLUGIN_FORGE_SCRIPT', 'kits');
-        continue;
-      }
-      if (taken.has(target.charId)) {
-        skip(file, `「${target.label}」已经有 ${taken.get(target.charId)} 这份 kit，这一份没有转换；导入时不执行它。`, `"${target.label}" already has the kit ${taken.get(target.charId)}, so this one was not converted; the importer does not run it.`, 'PLUGIN_FORGE_SCRIPT', 'kits');
-        continue;
-      }
-      if (!scripts) {
-        skip(file, `--no-scripts：没有生成脚本插件，「${target.label}」在数据插件里用它自己的 kit；导入时不执行这个文件。`, `--no-scripts: no script plugin was written, so "${target.label}" keeps its own kit in the content plugin; the importer does not run this file.`, 'PLUGIN_FORGE_SCRIPT');
-        continue;
-      }
-      taken.set(target.charId, file);
-      jobs.push({ file, register: target.charId, kind: target.kind, label: target.label, override: target.override });
+    if (pack.voices != null) {
+      assume('voices-jp', 'Forge 的 voices 是默认配音，文档写的是日文，所以写入 audio.voiceJp。', 'Forge voices are the default dub, documented as Japanese, so they were written to audio.voiceJp.');
+      putVoices('voices', ['audio', 'voiceJp'], pack.voices);
+      rewrittenAssets.push('voices → audio.voiceJp');
     }
-    if (jobs.length) {
-      const got = bundleForgeKits({
-        files: parse ? new Map([...files].map(([rel, bytes]) => {
-          if (!rel.startsWith('kits/') || !rel.endsWith('.js')) return [rel, bytes];
-          try { return [rel, Buffer.from(rewriteForgeKit(bytes.toString('utf8'), new Map([...recordIds, ...charIds]), parse))]; }
-          catch { return [rel, bytes]; }
-        })) : files, parse, kits: jobs.map(({ file, register }) => ({ file, register })),
-        header: [
-          `sim/index.js — written by \`node tools/plugin.mjs import-forge\` from the Forge pack ${base} ${version}.`,
-          'Nothing in this file ran during the import. Each Forge file below keeps a scope of its own; only its import and',
-          'export lines were rewritten: @kit/tier1.js → kit, @sim/constants.js → constants, @sim/detmath.js → math, @sim/dir.js → dir, @sim/targeting.js → targeting of sp:sdk@1.',
-          'It runs only where the server owner set SP_PLUGIN_SCRIPTS=sandbox (or a trusted mode) and a room selects this plugin.',
-        ],
-      });
-      for (const r of got.refused) skip(r.path, `${r.zh} 没有写进脚本插件；导入时不执行它。`, `${r.en} It was not written into the script plugin; the importer does not run it.`, 'PLUGIN_FORGE_SCRIPT', 'kits');
-      if (got.source) {
-        const registered = got.registered.map((r) => {
-          const job = jobs.find((j) => j.file === r.file);
-          for (const p of r.carried) used.add(p);
-          return { ...r, kind: job.kind, label: job.label, override: job.override };
-        });
-        scriptPlan = {
-          source: got.source, registered, mapped: got.mapped,
-          overrides: [...new Set(registered.map((r) => r.override).filter(Boolean))].sort(),
-        };
-        assume('kits-script', '包的 kits/ 合成一个脚本插件 kits-<id>：一个自包含的 sim 入口，每个 Forge 文件一个作用域，import 改成 sp:sdk@1；它要求数据插件的同一版本，为新记录的 charId 注册 kit。', 'The pack\'s kits/ became one script plugin kits-<id>: one self-contained sim entry, a scope per Forge file, imports rewritten to sp:sdk@1; it requires the content plugin at the same version and registers each kit for the new record\'s charId.');
-        for (const n of got.notes) assume(`kits-alive:${n.path}`, n.zh, n.en);
-        assume('kits-sdk', 'sp:sdk@1 的 kit 里同名的 helper 当成 Forge tier1 的同一个；SDK 的记录类 helper 返回冻结的副本，往里写的 kit 运行时才会出错。', 'A helper of the SDK\'s kit with a Forge tier1 name is taken as the same helper; the SDK\'s record helpers return frozen copies, so a kit that writes into one fails when it runs.');
+    if (isObj(pack.voiceLangs)) {
+      for (const [lang, block] of Object.entries(pack.voiceLangs)) {
+        const code = canonicalLang(lang);
+        // the dubs with a table here (round 40, DESIGN §32.14.11): 中文 audio.voice, 日本語 voiceJp, English voiceEn, 한국어 voiceKr
+        const tree = code === 'zh' || code === 'cn' ? 'voice' : code === 'ja' || code === 'jp' ? 'voiceJp' : code === 'en' ? 'voiceEn'
+          : code === 'ko' || code === 'kr' ? 'voiceKr' : null;
+        if (tree === 'voice') {
+          assume('voice-cn', 'voiceLangs.cn 写入 audio.voice（中文配音）。', 'voiceLangs.cn was written to audio.voice (the Chinese dub).');
+          putVoices(`voiceLangs.${lang}`, ['audio', 'voice'], block);
+          rewrittenAssets.push(`voiceLangs.${lang} → audio.voice`);
+        } else if (tree) {
+          putVoices(`voiceLangs.${lang}`, ['audio', tree], block);
+          rewrittenAssets.push(`voiceLangs.${lang} → audio.${tree}`);
+        } else skip(`voiceLangs.${lang}`, '这一档配音没有对应的语音表（只有中文、日文、英文、韩文），没有导入。', 'There is no voice table for this dub (only Chinese, Japanese, English and Korean), so it was not imported.');
       }
     }
-  }
-  {
-    const scripted = new Map((scriptPlan?.registered || []).map((r) => [r.register, r.file]));
-    for (const k of genericKits) {
-      const file = scripted.get(k.charId);
-      if (!file) { kitLine(k.label, k.name, k.kitPath, k.reason); continue; }
-      skip(`${k.label}#kit`, `${k.reason ? k.reason.zh : ''}「${k.name}」在数据插件里用通用 kit；${file} 写进了脚本插件，在选中脚本插件的房间里由它接管。`,
-        `${k.reason ? `${k.reason.en} ` : ''}"${k.name}" uses the generic kit in the content plugin; ${file} was written into the script plugin, which takes over in rooms that select it.`);
+    if (Array.isArray(pack.skins)) {
+      for (const skin of pack.skins) {
+        if (!isObj(skin) || typeof skin.charId !== 'string') { skip('skins', '一条时装没有 charId，没有导入。', 'A skin has no charId, so it was not imported.'); continue; }
+        // an outfit whose id is a skin key (docs/PLUGINS.md §9) is kept apart from the operator's own overlay: several
+        // outfits of one operator under their own keys. The 皮肤 picker lists that key (availableSkins) once the plugin
+        // is composed. An outfit with no usable id is folded onto that operator's one overlay and is not a picker row.
+        const key = typeof skin.id === 'string' && isSkinKey(skin.id) ? skin.id : null;
+        if (key) {
+          assume('skins-variants', 'Forge 的多套时装各自写进该干员的 skins 变体（键是时装 id）。外观插件叠到清单上之后，干员调配和自选详情的皮肤一栏会列出这个 id，玩家用 room.skins 穿上。', 'Each Forge outfit is written as that operator\'s own skins variant (keyed by the outfit\'s id). Once the cosmetic plugin is composed onto the manifest, the skin section in operator setup and the DIY detail lists that id, and the player wears it with room.skins.');
+          const name = typeof skin.name === 'string' ? skin.name.trim() : '';
+          if (name && [...name].length <= 64) setAt(assets, ['chars', skin.charId, 'skins', key, 'name'], name);
+          else if (name) skip(`skins.${key}.name`, '时装的显示名不在 1–64 字以内，没有写入。', 'The outfit\'s display name is not within 1–64 characters, so it was not written.');
+          if (isObj(skin.art)) {
+            for (const field of CHAR_FIELDS) if (typeof skin.art[field] === 'string') putFileAt(['chars', skin.charId, 'skins', key, field], skin.art[field]);
+            if (isObj(skin.art.spine?.front)) putSpine(['chars', skin.charId, 'skins'], key, ['spine', 'front'], skin.art.spine.front);
+          }
+        } else {
+          assume('skins', 'Forge 的时装没有能当皮肤键的 id，收成该干员的一份外观叠加，不会成为皮肤栏里的一行。', 'A Forge outfit has no id a skin key can use, so it was collapsed into one overlay of that operator and is not a row in the skin picker.');
+          if (isObj(skin.art)) {
+            for (const field of CHAR_FIELDS) if (typeof skin.art[field] === 'string') putImage(['chars'], skin.charId, [field], skin.art[field]);
+            if (isObj(skin.art.spine?.front)) putSpine(['chars'], skin.charId, ['spine', 'front'], skin.art.spine.front);
+          }
+        }
+        if (isObj(skin.voices)) putVoices(`skins.${skin.id || skin.charId}`, ['audio', 'voiceJp'], { [skin.charId]: skin.voices });
+      }
+    }
+
+    // BGM / sfx only when the path is clearly one of our track or sfx keys and the pack points at it.
+    const bgmKeys = new Set(['lobby', 'prep', 'combat', 'unite', 'boss']);
+    const maybeAudioTree = isObj(art.audio) ? art.audio : null;
+    if (isObj(maybeAudioTree?.bgm)) {
+      assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
+      for (const [key, rel] of Object.entries(maybeAudioTree.bgm)) {
+        if (!bgmKeys.has(key)) { skip(`art.audio.bgm.${key}`, '背景音乐只接受 lobby、prep、combat、unite、boss，没有导入。', 'Music only accepts lobby, prep, combat, unite and boss, so this was not imported.'); continue; }
+        const file = typeof rel === 'string' ? rel : isObj(rel) ? rel.loop : null;
+        const got = typeof file === 'string' ? takeMedia(files, used, file, 'audio') : null;
+        if (!got || got.error) { skip(`art.audio.bgm.${key}`, '音乐文件不在包里，没有导入。', 'The music file is not in the pack, so it was not imported.'); continue; }
+        setAt(assets, ['audio', 'bgm', key], { loop: got.dest });
+        remember(got.src, got.dest);
+        importedAssets.push(`audio.bgm.${key} ← ${got.src}`);
+      }
+    }
+    const putTrack = (at, rel, label) => {
+      const file = typeof rel === 'string' ? rel : isObj(rel) && typeof rel.loop === 'string' ? rel.loop : null;
+      if (!file) { skip(label, '音乐要是文件路径，或 { loop }，没有导入。', 'Music must be a file path or { loop }, so it was not imported.'); return false; }
+      const got = takeMedia(files, used, file, 'audio');
+      if (!got || got.error) { skip(label, '音乐文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The music file is missing, or it is not .mp3 / .ogg, so it was not imported.'); return false; }
+      const track = { loop: got.dest };
+      remember(got.src, got.dest);
+      if (isObj(rel) && typeof rel.intro === 'string') {
+        const intro = takeMedia(files, used, rel.intro, 'audio');
+        if (!intro || intro.error) skip(`${label}#intro`, 'intro 音轨不在包里，没有写入 intro。', 'The intro track is not in the pack, so intro was not written.');
+        else { track.intro = intro.dest; remember(intro.src, intro.dest); }
+      }
+      setAt(assets, at, track);
+      importedAssets.push(`${at.join('.')} ← ${got.src}`);
+      return true;
+    };
+    if (isObj(maybeAudioTree?.bossBgm)) {
+      assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
+      for (const [key, rel] of Object.entries(maybeAudioTree.bossBgm)) {
+        if (!isAssetKey(key)) { skip(`art.audio.bossBgm.${String(key).slice(0, 40)}`, 'boss 音乐的 id 不合规，没有导入。', 'The boss-music id is not a valid asset key, so it was not imported.'); continue; }
+        putTrack(['audio', 'bossBgm', key], rel, `art.audio.bossBgm.${key}`);
+      }
+    }
+    const sfxUnitAudio = new Set(['attack', 'hit', 'skill', 'die', 'born']);
+    const sfxUnitMaps = new Set(['skills', 'attacks', 'hits']);
+    if (isObj(maybeAudioTree?.sfx)) {
+      assume('art-audio', 'art.audio 不是 Forge 的正式表。形状对得上的音轨和音效仍然写入。', 'art.audio is not an official Forge table. Tracks and sounds whose shape matches were still written.');
+      for (const bucket of ['ui', 'battle']) {
+        const block = maybeAudioTree.sfx[bucket];
+        if (block == null) continue;
+        if (!isObj(block)) { skip(`art.audio.sfx.${bucket}`, '音效表不是对象，没有导入。', 'The sound table is not an object, so it was not imported.'); continue; }
+        for (const [key, rel] of Object.entries(block)) {
+          if (!isAssetKey(key) || typeof rel !== 'string') { skip(`art.audio.sfx.${bucket}.${String(key).slice(0, 40)}`, '音效要是一个 .mp3 / .ogg 路径，没有导入。', 'A sound must be one .mp3 / .ogg path, so it was not imported.'); continue; }
+          const got = takeMedia(files, used, rel, 'audio');
+          if (!got || got.error) { skip(`art.audio.sfx.${bucket}.${key}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
+          setAt(assets, ['audio', 'sfx', bucket, key], got.dest);
+          remember(got.src, got.dest);
+          importedAssets.push(`audio.sfx.${bucket}.${key} ← ${got.src}`);
+        }
+      }
+      if (maybeAudioTree.sfx.units != null && !isObj(maybeAudioTree.sfx.units)) skip('art.audio.sfx.units', '干员音效不是对象，没有导入。', 'Unit sounds are not an object, so they were not imported.');
+      if (isObj(maybeAudioTree.sfx.units)) {
+        for (const [id, rec] of Object.entries(maybeAudioTree.sfx.units)) {
+          if (!isAssetKey(id) || !isObj(rec)) { skip(`art.audio.sfx.units.${String(id).slice(0, 40)}`, '干员音效写得不对，没有导入。', 'This unit-sound entry is not usable, so it was not imported.'); continue; }
+          const out = {};
+          for (const [field, val] of Object.entries(rec)) {
+            if (sfxUnitAudio.has(field) && typeof val === 'string') {
+              const got = takeMedia(files, used, val, 'audio');
+              if (!got || got.error) { skip(`art.audio.sfx.units.${id}.${field}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
+              out[field] = got.dest;
+              remember(got.src, got.dest);
+            } else if (sfxUnitMaps.has(field) && isObj(val)) {
+              const map = {};
+              for (const [idx, rel] of Object.entries(val)) {
+                if (!/^\d{1,2}$/.test(idx) || typeof rel !== 'string') { skip(`art.audio.sfx.units.${id}.${field}.${String(idx).slice(0, 8)}`, '分组音效的序号必须是 0–99，值是一个音频路径，没有导入。', 'A grouped sound index must be 0–99 and its value one audio path, so it was not imported.'); continue; }
+                const got = takeMedia(files, used, rel, 'audio');
+                if (!got || got.error) { skip(`art.audio.sfx.units.${id}.${field}.${idx}`, '音效文件不在包里，或扩展名不是 .mp3 / .ogg，没有导入。', 'The sound file is missing, or it is not .mp3 / .ogg, so it was not imported.'); continue; }
+                map[idx] = got.dest;
+                remember(got.src, got.dest);
+              }
+              if (Object.keys(map).length) out[field] = map;
+            } else skip(`art.audio.sfx.units.${id}.${field}`, '这个音效字段对不上（只要 attack、hit、skill、die、born，或 skills / attacks / hits），没有导入。', 'This sound field does not match (attack, hit, skill, die, born, or skills / attacks / hits), so it was not imported.');
+          }
+          if (Object.keys(out).length) {
+            setAt(assets, ['audio', 'sfx', 'units', id], out);
+            importedAssets.push(`audio.sfx.units.${id}`);
+          }
+        }
+      }
+      for (const k of Object.keys(maybeAudioTree.sfx)) {
+        if (k !== 'ui' && k !== 'battle' && k !== 'units') skip(`art.audio.sfx.${k}`, '音效只接受 ui、battle、units，没有导入。', 'Sounds only accept ui, battle and units, so this was not imported.');
+      }
+    }
+    if (isObj(maybeAudioTree)) {
+      for (const k of Object.keys(maybeAudioTree)) {
+        if (k !== 'bgm' && k !== 'sfx' && k !== 'bossBgm') skip(`art.audio.${k}`, '这个音频字段对不上，没有导入。', 'This audio field does not match, so it was not imported.');
+      }
     }
   }
 
-  /** @type {{ lang: string, strings: Record<string, string>, kind: 'ui' | 'content', doc?: any }[]} */
-  const translations = [];
-  /** @type {Map<string, string>} */
-  const seenLang = new Map();
-  if (isObj(pack.i18n)) {
-    for (const [lang, rel] of Object.entries(pack.i18n)) {
-      if (typeof rel !== 'string') { skip(`i18n.${lang}`, '翻译不是一个文件路径，没有导入。', 'The translation is not a file path, so it was not imported.'); continue; }
-      const code = canonicalLang(lang);
-      if (!code) { skip(`i18n.${lang}`, '不是语言代码，没有导入。', 'Not a language code, so it was not imported.'); continue; }
-      if (seenLang.has(code)) fail('PLUGIN_FORGE_INPUT', `i18n "${seenLang.get(code)}" and "${lang}" are the same language`);
-      seenLang.set(code, lang);
-      const found = lookup(files, rel);
-      if (!found) { skip(`i18n.${lang}`, '翻译文件不在包里，没有导入。', 'The translation file is not in the pack, so it was not imported.'); continue; }
-      used.add(found);
+  /** Map the pack's gameplay records onto patches/operators/enemyRecords and rewrite their ids. */
+  function applyForgeRecords() {
+    const DROP_TABLE = { chess: 'operators', units: 'operators', bonds: 'bonds', bands: 'bands', items: 'items', tokens: 'tokens', garrisons: 'traits' };
+    for (const name of CONTENT_NAMES) {
       let doc;
-      try { doc = readJsonBuf(files.get(found), found); } catch (e) {
+      try { doc = loadTableFile(files, used, name); } catch (e) {
         if (e instanceof ForgeImportError) throw e;
-        skip(found, '翻译文件读不了，没有导入。', 'The translation file could not be read, so it was not imported.');
+        skip(`${name}.json`, '这个数据文件读不了，没有导入。', 'This data file could not be read, so it was not imported.', undefined, DROP_TABLE[name]);
         continue;
       }
-      if (isObj(doc) && doc.version === 1 && canonicalLang(doc.lang) === code && isObj(doc.files)) {
-        const badLeaf = contentLeavesBad(doc.files, table);
-        if (badLeaf) { skip(found, `翻译要改的词「${badLeaf}」在本安装里不是现成的字符串，整份没有导入（放进内容翻译会让整套数据被拒）。`, `The translation touches "${badLeaf}", which is not an existing string in this installation, so the file was not imported (a bad content translation refuses the whole set).`); continue; }
-        translations.push({ lang: code, strings: {}, kind: 'content', doc });
-        importedData.push(`i18n:${code} → content`);
+      if (!doc) {
+        if (declaredContent.includes(name)) skip(`content:${name}`, 'content 声明了这个文件，但包里没有对应的 JSON，没有导入。', 'content names this file, but the pack has no such JSON, so it was not imported.', undefined, DROP_TABLE[name]);
         continue;
       }
-      if (code === SOURCE_LANG) { skip(found, '中文是原文，不是语言包，没有导入。', 'Chinese is the source language, not a language pack, so it was not imported.'); continue; }
-      if (!isObj(doc) || !Object.values(doc).length || Object.values(doc).some((v) => typeof v !== 'string')) {
-        skip(found, '翻译既不是界面词条表，也不是内容翻译（version 1），没有导入。', 'The translation is neither a UI string map nor a content translation (version 1), so it was not imported.');
-        continue;
+      const past = numbersPastBound(doc);
+      if (past.length) {
+        const shown = past.slice(0, 8);
+        const tail = past.length > shown.length ? ` (+${past.length - shown.length})` : '';
+        skip(`${name}.json#number`, `这些数超出 ±${PLUGIN_LIMITS.number}，没有写进游戏数据。写进游戏数据的仍限 ±${PLUGIN_LIMITS.number}：技能 duration、spCost、initSp、maxChargeTime、increment，黑板，属性，price、sellPrice，补丁叶子。${shown.join('；')}${tail}`, `These numbers are outside ±${PLUGIN_LIMITS.number} and were not written into game data. Values that are written stay within ±${PLUGIN_LIMITS.number}: skill duration, spCost, initSp, maxChargeTime, increment, blackboards, stats, price, sellPrice, and patch leaves. ${shown.join('; ')}${tail}`);
       }
-      assume('i18n-ui', '扁平界面词条写成 lang 插件；已有内置语言时覆盖同名词条，缺失词条回退。', 'A flat UI string map becomes a lang plugin; for a built-in language it overrides supplied keys and falls back for missing keys.');
-      /** @type {Record<string, string>} */
-      const strings = {};
-      for (const [k, v] of Object.entries(doc)) if (typeof v === 'string' && k && !k.startsWith('_')) strings[k] = v;
-      translations.push({ lang: code, strings, kind: 'ui' });
-      importedData.push(`i18n:${code} → lang`);
+      const idField = name === 'units' ? 'charId' : name === 'enemies' ? 'key' : name === 'chess' ? 'chessId' : 'id';
+      const map = asMap(doc, idField);
+      /** @type {Map<string, any>} */
+      const newChess = new Map();
+      for (const [id, rec] of Object.entries(map)) {
+        if (id === '__proto__' || id === 'constructor' || id === 'prototype') continue;
+        if (gameplay.handled.has(`${name}:${id}`)) continue;
+        const exists = name === 'units' ? !!(table('units') && has(table('units'), id)) : !!(table(name) && has(table(name), id));
+        const declared = overrideKeys.has(`${name}:${id}`);
+        if (exists) {
+          if (!declared) { skip(`${name}:${id}`, '这条官方记录没有写进 overrides，按 Forge 的规矩不能默默覆盖，没有导入。', 'This official record is not in overrides. Forge refuses a silent replace, so it was not imported.'); continue; }
+          if (!PATCH_TABLE[name] && name !== 'units') { skip(`${name}:${id}`, '这张表对不上我们的补丁文件，没有导入。', 'This table does not match a patch file of ours, so it was not imported.'); continue; }
+          patchRecord(name, id, rec);
+          continue;
+        }
+        if (name === 'chess') { newChess.set(id, rec); continue; }
+        if (name === 'units') { mapOperator(id, isObj(rec) ? { ...rec, charId: rec.charId || id } : rec); continue; }
+        if (name === 'tokens') packTokenIds.add(id);
+        if (name === 'enemies' && isObj(rec)) {
+          const baseId = typeof rec.base === 'string' ? rec.base : typeof rec.special === 'string' ? rec.special : '';
+          const enemies = table('enemies');
+          if (!baseId || !enemies || !has(enemies, baseId)) {
+            skip(`enemies:${id}`, '新敌人没有写一个本安装里存在的官方 base（或 special），不能凭空造一套技能，没有导入。', 'A new enemy has no official base (or special) that exists in this installation. A kit was not invented, so it was not imported.');
+            continue;
+          }
+          const eid = namespaced('enemy_x', recordNs, id, seenIds);
+          enemyIds.set(id, eid);
+          const set = {};
+          if (typeof rec.name === 'string' && rec.name.trim()) set.name = rec.name.trim().slice(0, 60);
+          const stats = finiteStats(rec.stats || rec, enemies[baseId]?.stats);
+          if (stats) set.stats = stats;
+          enemyRecords.push({ id: eid, base: baseId, ...(rec.special && rec.special !== baseId ? { special: rec.special } : {}), ...(Object.keys(set).length ? { set } : {}) });
+          importedData.push(`enemies:${id} → ${eid} (base ${baseId})`);
+          rewrittenData.push(`${id} → ${eid}`);
+          continue;
+        }
+        skip(`${name}:${id}`, '新记录没有安全的紧凑映射（模式不是 Forge 的表；其他表只自动导入带官方 base 的敌人、干员和成对的棋子，以及已有记录上类型不变的补丁）。', 'A new record has no safe compact mapping (Forge has no mode table; other tables only auto-import enemies with an official base, operators, chess pairs, and type-preserving patches of existing records).', undefined, DROP_TABLE[name]);
+      }
+      if (newChess.size) mapChessRecords(newChess);
     }
+
+    // Chess overrides are planned before bond overrides. Compose membership onto the bond op when one exists, otherwise
+    // onto the official array. A result that equals the official list drops a redundant op. visibleMembers is edited
+    // only when that array already exists: an empty invented list would hide every other member in the catalogue.
+    if (bondEdits.size) {
+      const bondTable = table('bonds') || {};
+      const sameList = (a, b) => Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i]);
+      for (const [bondId, edit] of bondEdits) {
+        const official = bondTable[bondId];
+        if (!isObj(official)) continue;
+        for (const field of ['members', 'visibleMembers']) {
+          const idx = patches.findIndex((op) => op && op.op === 'set' && op.file === 'bonds' && op.id === bondId && Array.isArray(op.path) && op.path.length === 1 && op.path[0] === field);
+          const existing = idx >= 0 ? patches[idx] : null;
+          const base = existing && Array.isArray(existing.value) ? existing.value.slice()
+            : Array.isArray(official[field]) ? official[field].slice() : null;
+          if (!base) continue;
+          const next = base.filter((m) => typeof m !== 'string' || !edit.remove.has(m));
+          for (const chessId of edit.add) {
+            if (!edit.remove.has(chessId) && !next.includes(chessId)) next.push(chessId);
+          }
+          if (sameList(next, official[field])) {
+            if (idx >= 0) patches.splice(idx, 1);
+          } else if (existing) existing.value = next;
+          else patches.push({ op: 'set', file: 'bonds', id: bondId, path: [field], value: next });
+        }
+      }
+    }
+
+    for (const [a, b] of skillIds) recordIds.set(a, b);
+    for (let i = 0; i < gameplayRecords.length; i++) gameplayRecords[i] = rewriteForgeIds(gameplayRecords[i], recordIds);
+    for (let i = 0; i < operators.length; i++) operators[i] = rewriteForgeIds(operators[i], recordIds);
+    for (let i = 0; i < patches.length; i++) patches[i] = rewriteForgeIds(patches[i], recordIds);
   }
 
-  /** @type {{ slot: string, module: string, title: string, role?: string, copied?: boolean, bundle?: string, css?: string, marker?: string | null, copies?: { src: string, dest: string, text: string }[], strings?: Record<string, Record<string, string>>, declared?: string[], packId?: string }[]} */
-  const panels = [];
-  const manualPanels = [];
-  const panelList = Array.isArray(pack.client?.panels) ? pack.client.panels : isObj(pack.client?.panels) ? Object.values(pack.client.panels) : pack.client?.panels != null ? [pack.client.panels] : [];
-  /** slot → how many panels already took it. A second skeleton stays manual; a second copied panel gets its own ui plugin. */
-  const slotUses = new Map();
-  if (pack.client != null && !isObj(pack.client)) skip('client', 'client 不是对象，没有导入。', 'client is not an object, so it was not imported.');
-  else if (isObj(pack.client)) {
-    for (const k of Object.keys(pack.client)) {
-      if (k === 'panels' || k === 'theme') continue;
-      skip(`client.${k}`, '除了只读面板和主题变量，client 里的其他声明不能导入。', 'Apart from a read-only panel and theme variables, other client declarations cannot be imported.');
-    }
-    const theme = pack.client.theme;
-    if (theme != null && !isObj(theme)) skip('client.theme', '主题不是对象，没有导入。', 'The theme is not an object, so it was not imported.');
-    else if (isObj(theme)) {
-      for (const k of Object.keys(theme)) if (k !== 'vars') skip(`client.theme.${k}`, '主题里除了变量，其他声明不能导入。', 'Apart from variables, other theme declarations cannot be imported.');
-      const rawVars = theme.vars;
-      if (rawVars != null && !isObj(rawVars)) skip('client.theme.vars', '主题变量不是对象，没有导入。', 'Theme variables are not an object, so they were not imported.');
-      else if (isObj(rawVars)) {
-        const read = readThemeDeclaration({ vars: rawVars }, { drop: true });
-        themeVars = read.vars && Object.keys(read.vars).length ? read.vars : null;
-        Object.keys(rawVars).forEach((name, i) => {
-          if (themeVars && Object.prototype.hasOwnProperty.call(themeVars, name)) return;
-          const code = i >= THEME_VAR_LIMIT ? 'PLUGIN_THEME_LIMIT' : (readThemeDeclaration({ vars: { [name]: rawVars[name] } }).problems[0]?.code || 'PLUGIN_THEME_VALUE');
-          const [zh, en] = themeDrop(code, name);
-          skip(`client.theme.vars.${name}`, zh, en, code);
+  /** The kits/ folder → one sandboxed script plugin, or null (the importer never runs pack code). */
+  function planForgeScripts() {
+    let scriptPlan = null;
+    {
+      // file names go into the entry as comments, so only plain names are carried (helpers are checked by forgeKits.js)
+      const SAFE_KIT = /^[A-Za-z0-9_][A-Za-z0-9_./-]*\.js$/;
+      const named = [...files.keys()].filter((rel) => /^kits\/[^/]+\.js$/.test(rel) && !rel.slice(5).startsWith('_'));
+      const officialTarget = (stem) => {
+        const chessId = stem.replace(/_b$/, '_a');
+        if ((overrideKeys.has(`chess:${stem}`) || overrideKeys.has(`chess:${chessId}`)) && has(table('chess') || {}, chessId)) {
+          return { charId: chessId, label: chessId, kind: 'official', override: has(KITS, chessId) ? chessId : null };
+        }
+        if (overrideKeys.has(`units:${stem}`) && has(officialUnits(), stem)) return { charId: stem, label: stem, kind: 'official', override: has(KITS, stem) ? stem : null };
+        return null;
+      };
+      /** @type {{ file: string, register: string, kind: string, label: string, override: string | null }[]} */
+      const jobs = [];
+      const taken = new Map();
+      for (const file of [...new Set([...explicitKits.keys(), ...named])].sort()) {
+        used.add(file);
+        const stem = file.split('/').pop().replace(/\.js$/, '');
+        if (!SAFE_KIT.test(file)) {
+          skip(file, '文件名里有字母、数字和 . _ - 以外的字符，转不成脚本插件；导入时不执行它。', 'The file name has characters other than letters, digits and . _ -, so it was not converted; the importer does not run it.', 'PLUGIN_FORGE_SCRIPT', 'kits');
+          continue;
+        }
+        const owner = explicitKits.get(file);
+        const target = owner ? { ...owner, kind: 'record', override: null } : recordTargets.has(stem) ? { ...recordTargets.get(stem), kind: 'record', override: null } : officialTarget(stem);
+        if (!target) {
+          const why = packTokenIds.has(stem)
+            ? ['这是召唤物（tokens）的 kit，当前脚本注册接口只支持干员；召唤物数据可导入，但这份 kit 没有转换，导入时不执行它。', 'This is a summon (tokens) kit. Token data can import, but the script registration surface supports operators only, so this kit was not converted; the importer does not run it.']
+            : [`文件名「${stem}」不是本包导入的棋子或干员，也不是 overrides 里声明的官方 id，转不成脚本插件；导入时不执行它。`, `The file name "${stem}" is not an imported chess or operator record of this pack, nor an official id the pack declares in overrides, so it was not converted; the importer does not run it.`];
+          skip(file, why[0], why[1], 'PLUGIN_FORGE_SCRIPT', 'kits');
+          continue;
+        }
+        if (taken.has(target.charId)) {
+          skip(file, `「${target.label}」已经有 ${taken.get(target.charId)} 这份 kit，这一份没有转换；导入时不执行它。`, `"${target.label}" already has the kit ${taken.get(target.charId)}, so this one was not converted; the importer does not run it.`, 'PLUGIN_FORGE_SCRIPT', 'kits');
+          continue;
+        }
+        if (!scripts) {
+          skip(file, `--no-scripts：没有生成脚本插件，「${target.label}」在数据插件里用它自己的 kit；导入时不执行这个文件。`, `--no-scripts: no script plugin was written, so "${target.label}" keeps its own kit in the content plugin; the importer does not run this file.`, 'PLUGIN_FORGE_SCRIPT');
+          continue;
+        }
+        taken.set(target.charId, file);
+        jobs.push({ file, register: target.charId, kind: target.kind, label: target.label, override: target.override });
+      }
+      if (jobs.length) {
+        const got = bundleForgeKits({
+          files: parse ? new Map([...files].map(([rel, bytes]) => {
+            if (!rel.startsWith('kits/') || !rel.endsWith('.js')) return [rel, bytes];
+            try { return [rel, Buffer.from(rewriteForgeKit(bytes.toString('utf8'), new Map([...recordIds, ...charIds]), parse))]; }
+            catch { return [rel, bytes]; }
+          })) : files, parse, kits: jobs.map(({ file, register }) => ({ file, register })),
+          header: [
+            `sim/index.js — written by \`node tools/plugin.mjs import-forge\` from the Forge pack ${base} ${version}.`,
+            'Nothing in this file ran during the import. Each Forge file below keeps a scope of its own; only its import and',
+            'export lines were rewritten: @kit/tier1.js → kit, @sim/constants.js → constants, @sim/detmath.js → math, @sim/dir.js → dir, @sim/targeting.js → targeting of sp:sdk@1.',
+            'It runs only where the server owner set SP_PLUGIN_SCRIPTS=sandbox (or a trusted mode) and a room selects this plugin.',
+          ],
         });
+        for (const r of got.refused) skip(r.path, `${r.zh} 没有写进脚本插件；导入时不执行它。`, `${r.en} It was not written into the script plugin; the importer does not run it.`, 'PLUGIN_FORGE_SCRIPT', 'kits');
+        if (got.source) {
+          const registered = got.registered.map((r) => {
+            const job = jobs.find((j) => j.file === r.file);
+            for (const p of r.carried) used.add(p);
+            return { ...r, kind: job.kind, label: job.label, override: job.override };
+          });
+          scriptPlan = {
+            source: got.source, registered, mapped: got.mapped,
+            overrides: [...new Set(registered.map((r) => r.override).filter(Boolean))].sort(),
+          };
+          assume('kits-script', '包的 kits/ 合成一个脚本插件 kits-<id>：一个自包含的 sim 入口，每个 Forge 文件一个作用域，import 改成 sp:sdk@1；它要求数据插件的同一版本，为新记录的 charId 注册 kit。', 'The pack\'s kits/ became one script plugin kits-<id>: one self-contained sim entry, a scope per Forge file, imports rewritten to sp:sdk@1; it requires the content plugin at the same version and registers each kit for the new record\'s charId.');
+          for (const n of got.notes) assume(`kits-alive:${n.path}`, n.zh, n.en);
+          assume('kits-sdk', 'sp:sdk@1 的 kit 里同名的 helper 当成 Forge tier1 的同一个；SDK 的记录类 helper 返回冻结的副本，往里写的 kit 运行时才会出错。', 'A helper of the SDK\'s kit with a Forge tier1 name is taken as the same helper; the SDK\'s record helpers return frozen copies, so a kit that writes into one fails when it runs.');
+        }
       }
     }
+    {
+      const scripted = new Map((scriptPlan?.registered || []).map((r) => [r.register, r.file]));
+      for (const k of genericKits) {
+        const file = scripted.get(k.charId);
+        if (!file) { kitLine(k.label, k.name, k.kitPath, k.reason); continue; }
+        skip(`${k.label}#kit`, `${k.reason ? k.reason.zh : ''}「${k.name}」在数据插件里用通用 kit；${file} 写进了脚本插件，在选中脚本插件的房间里由它接管。`,
+          `${k.reason ? `${k.reason.en} ` : ''}"${k.name}" uses the generic kit in the content plugin; ${file} was written into the script plugin, which takes over in rooms that select it.`);
+      }
+    }
+    return scriptPlan;
   }
-  const uiStrings = () => {
-    /** @type {Record<string, Record<string, string>>} */
-    const strings = {};
-    for (const row of translations) if (row.kind === 'ui' && row.strings) strings[row.lang] = row.strings;
-    return strings;
-  };
-  for (const panel of panelList) {
-    if (!isObj(panel)) { skip('client.panels', '面板不是对象，没有导入。', 'A panel is not an object, so it was not imported.', undefined, 'panels'); continue; }
-    const forgeSlot = typeof panel.slot === 'string' ? panel.slot : '';
-    const module = typeof panel.module === 'string' ? panel.module : typeof panel.entry === 'string' ? panel.entry : '';
-    const title = String(panel.name || panel.id || forgeSlot || '?').slice(0, 80);
-    const shortTitle = typeof panel.name === 'string' ? panel.name.slice(0, 40) : typeof panel.id === 'string' ? panel.id.slice(0, 40) : title.slice(0, 40);
-    const blocked = panel.wraps != null || panel.readonly === false || panel.readOnly === false;
-    let found = '';
-    /** @type {{ ok?: boolean, surfaces?: string[], listensRoom?: boolean, bundle?: string, css?: string, copies?: { src: string, dest: string, text: string }[], declared?: string[] } | null} */
-    let planned = null;
-    if (module) {
-      const hit = lookup(files, module);
-      if (hit) { found = hit; used.add(hit); }
-    }
-    if (found && !blocked) {
-      planned = typeof parse === 'function'
-        ? planForgePanel({ files, entry: found, panel, parse, requires: isObj(pack.client) ? pack.client.requires : null })
-        : { ok: false, surfaces: ['parse'], listensRoom: false };
-    } else if (blocked) {
-      const surfaces = [];
-      if (panel.wraps != null) surfaces.push('wraps');
-      if (panel.readonly === false || panel.readOnly === false) surfaces.push('readonly');
-      planned = { ok: false, surfaces, listensRoom: false };
-    }
-    const compatible = !!(planned && planned.ok);
-    const display = forgeDisplaySlot(forgeSlot, { compatible, listensRoom: !!(planned && planned.listensRoom) });
-    const surfaces = planned && Array.isArray(planned.surfaces) ? planned.surfaces : ['missing'];
-    if (!compatible) {
-      const listed = surfaces.length ? ` 用到了这里没有的接口：${surfaces.join('、')}。` : '';
-      const listedEn = surfaces.length ? ` Unsupported surfaces: ${surfaces.join(', ')}.` : '';
-      const capacity = surfaces.includes('room.capacity');
-      skip(`client.panels:${title}#module`, `面板「${title}」的脚本 ${module || '(none)'} 没有复制；需要改写成 postMessage API v1。${listed}${capacity ? ' 本服固定 4 个席位，没有扩容或房间容量设置。' : ''}`, `Panel "${title}" script ${module || '(none)'} was not copied; rewrite it to postMessage API v1.${listedEn}${capacity ? ' This server has four fixed seats and no room-capacity setting.' : ''}`, 'PLUGIN_FORGE_PANEL_SCRIPT', undefined, surfaces.length ? { surfaces } : undefined);
-    }
-    if (blocked) {
-      const where = display.slot || display.suggested || 'room.panel';
-      manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot: where });
-      skip(`client.panels:${title}#mount`, `面板「${title}」在 ${forgeSlot} 改写页面组件，需要人工适配为 ${where} 的只读面板。`, `Panel "${title}" at ${forgeSlot} rewrites a component; it needs manual adaptation as a read-only ${where} panel.`, 'PLUGIN_FORGE_MOUNT', 'panels');
-      continue;
-    }
-    // a stub panel's stylesheet is not copied (a copied panel carries its styles in its own bundle)
-    if (!compatible) {
-      const styles = Array.isArray(panel.styles) ? panel.styles : typeof panel.styles === 'string' ? [panel.styles] : [];
-      for (const rel of styles) {
-        if (typeof rel !== 'string' || !rel) continue;
+
+  function planForgeTranslations() {
+    /** @type {{ lang: string, strings: Record<string, string>, kind: 'ui' | 'content', doc?: any }[]} */
+    const translations = [];
+    /** @type {Map<string, string>} */
+    const seenLang = new Map();
+    if (isObj(pack.i18n)) {
+      for (const [lang, rel] of Object.entries(pack.i18n)) {
+        if (typeof rel !== 'string') { skip(`i18n.${lang}`, '翻译不是一个文件路径，没有导入。', 'The translation is not a file path, so it was not imported.'); continue; }
+        const code = canonicalLang(lang);
+        if (!code) { skip(`i18n.${lang}`, '不是语言代码，没有导入。', 'Not a language code, so it was not imported.'); continue; }
+        if (seenLang.has(code)) fail('PLUGIN_FORGE_INPUT', `i18n "${seenLang.get(code)}" and "${lang}" are the same language`);
+        seenLang.set(code, lang);
         const found = lookup(files, rel);
-        if (found) used.add(found);
-        skip(`client.panels:${title}#styles`, `面板「${title}」的样式表 ${rel} 没有复制；关掉动画之类的效果需要人工适配。`, `Panel "${title}" stylesheet ${rel} was not copied; effects such as turning animations off need manual adaptation.`, 'PLUGIN_FORGE_PANEL_SCRIPT');
+        if (!found) { skip(`i18n.${lang}`, '翻译文件不在包里，没有导入。', 'The translation file is not in the pack, so it was not imported.'); continue; }
+        used.add(found);
+        let doc;
+        try { doc = readJsonBuf(files.get(found), found); } catch (e) {
+          if (e instanceof ForgeImportError) throw e;
+          skip(found, '翻译文件读不了，没有导入。', 'The translation file could not be read, so it was not imported.');
+          continue;
+        }
+        if (isObj(doc) && doc.version === 1 && canonicalLang(doc.lang) === code && isObj(doc.files)) {
+          const badLeaf = contentLeavesBad(doc.files, table);
+          if (badLeaf) { skip(found, `翻译要改的词「${badLeaf}」在本安装里不是现成的字符串，整份没有导入（放进内容翻译会让整套数据被拒）。`, `The translation touches "${badLeaf}", which is not an existing string in this installation, so the file was not imported (a bad content translation refuses the whole set).`); continue; }
+          translations.push({ lang: code, strings: {}, kind: 'content', doc });
+          importedData.push(`i18n:${code} → content`);
+          continue;
+        }
+        if (code === SOURCE_LANG) { skip(found, '中文是原文，不是语言包，没有导入。', 'Chinese is the source language, not a language pack, so it was not imported.'); continue; }
+        if (!isObj(doc) || !Object.values(doc).length || Object.values(doc).some((v) => typeof v !== 'string')) {
+          skip(found, '翻译既不是界面词条表，也不是内容翻译（version 1），没有导入。', 'The translation is neither a UI string map nor a content translation (version 1), so it was not imported.');
+          continue;
+        }
+        assume('i18n-ui', '扁平界面词条写成 lang 插件；已有内置语言时覆盖同名词条，缺失词条回退。', 'A flat UI string map becomes a lang plugin; for a built-in language it overrides supplied keys and falls back for missing keys.');
+        /** @type {Record<string, string>} */
+        const strings = {};
+        for (const [k, v] of Object.entries(doc)) if (typeof v === 'string' && k && !k.startsWith('_')) strings[k] = v;
+        translations.push({ lang: code, strings, kind: 'ui' });
+        importedData.push(`i18n:${code} → lang`);
       }
     }
-    if (!display.slot) {
-      const suggestedSlot = display.suggested || PANEL_REWRITE[forgeSlot] || 'room.panel';
-      manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot });
-      skip(`client.panels:${title}#mount`, `面板「${title}」挂载点 ${forgeSlot || '(none)'} 需要人工适配，可改写到 ${suggestedSlot}（位置与原版不同）。`, `Panel "${title}" at Forge mount ${forgeSlot || '(none)'} needs manual adaptation; consider rewriting for ${suggestedSlot} (a different location).`, 'PLUGIN_FORGE_MOUNT', 'panels');
-      continue;
+    return translations;
+  }
+
+  function planForgePanels() {
+    /** @type {{ slot: string, module: string, title: string, role?: string, copied?: boolean, bundle?: string, css?: string, marker?: string | null, copies?: { src: string, dest: string, text: string }[], strings?: Record<string, Record<string, string>>, declared?: string[], packId?: string }[]} */
+    const panels = [];
+    const manualPanels = [];
+    const panelList = Array.isArray(pack.client?.panels) ? pack.client.panels : isObj(pack.client?.panels) ? Object.values(pack.client.panels) : pack.client?.panels != null ? [pack.client.panels] : [];
+    /** slot → how many panels already took it. A second skeleton stays manual; a second copied panel gets its own ui plugin. */
+    const slotUses = new Map();
+    if (pack.client != null && !isObj(pack.client)) skip('client', 'client 不是对象，没有导入。', 'client is not an object, so it was not imported.');
+    else if (isObj(pack.client)) {
+      for (const k of Object.keys(pack.client)) {
+        if (k === 'panels' || k === 'theme') continue;
+        skip(`client.${k}`, '除了只读面板和主题变量，client 里的其他声明不能导入。', 'Apart from a read-only panel and theme variables, other client declarations cannot be imported.');
+      }
+      const theme = pack.client.theme;
+      if (theme != null && !isObj(theme)) skip('client.theme', '主题不是对象，没有导入。', 'The theme is not an object, so it was not imported.');
+      else if (isObj(theme)) {
+        for (const k of Object.keys(theme)) if (k !== 'vars') skip(`client.theme.${k}`, '主题里除了变量，其他声明不能导入。', 'Apart from variables, other theme declarations cannot be imported.');
+        const rawVars = theme.vars;
+        if (rawVars != null && !isObj(rawVars)) skip('client.theme.vars', '主题变量不是对象，没有导入。', 'Theme variables are not an object, so they were not imported.');
+        else if (isObj(rawVars)) {
+          const read = readThemeDeclaration({ vars: rawVars }, { drop: true });
+          themeVars = read.vars && Object.keys(read.vars).length ? read.vars : null;
+          Object.keys(rawVars).forEach((name, i) => {
+            if (themeVars && Object.prototype.hasOwnProperty.call(themeVars, name)) return;
+            const code = i >= THEME_VAR_LIMIT ? 'PLUGIN_THEME_LIMIT' : (readThemeDeclaration({ vars: { [name]: rawVars[name] } }).problems[0]?.code || 'PLUGIN_THEME_VALUE');
+            const [zh, en] = themeDrop(code, name);
+            skip(`client.theme.vars.${name}`, zh, en, code);
+          });
+        }
+      }
     }
-    if (!compatible) {
-      if ((slotUses.get(display.slot) || 0) > 0) {
+    const uiStrings = () => {
+      /** @type {Record<string, Record<string, string>>} */
+      const strings = {};
+      for (const row of translations) if (row.kind === 'ui' && row.strings) strings[row.lang] = row.strings;
+      return strings;
+    };
+    for (const panel of panelList) {
+      if (!isObj(panel)) { skip('client.panels', '面板不是对象，没有导入。', 'A panel is not an object, so it was not imported.', undefined, 'panels'); continue; }
+      const forgeSlot = typeof panel.slot === 'string' ? panel.slot : '';
+      const module = typeof panel.module === 'string' ? panel.module : typeof panel.entry === 'string' ? panel.entry : '';
+      const title = String(panel.name || panel.id || forgeSlot || '?').slice(0, 80);
+      const shortTitle = typeof panel.name === 'string' ? panel.name.slice(0, 40) : typeof panel.id === 'string' ? panel.id.slice(0, 40) : title.slice(0, 40);
+      const blocked = panel.wraps != null || panel.readonly === false || panel.readOnly === false;
+      let found = '';
+      /** @type {{ ok?: boolean, surfaces?: string[], listensRoom?: boolean, bundle?: string, css?: string, copies?: { src: string, dest: string, text: string }[], declared?: string[] } | null} */
+      let planned = null;
+      if (module) {
+        const hit = lookup(files, module);
+        if (hit) { found = hit; used.add(hit); }
+      }
+      if (found && !blocked) {
+        planned = typeof parse === 'function'
+          ? planForgePanel({ files, entry: found, panel, parse, requires: isObj(pack.client) ? pack.client.requires : null })
+          : { ok: false, surfaces: ['parse'], listensRoom: false };
+      } else if (blocked) {
+        const surfaces = [];
+        if (panel.wraps != null) surfaces.push('wraps');
+        if (panel.readonly === false || panel.readOnly === false) surfaces.push('readonly');
+        planned = { ok: false, surfaces, listensRoom: false };
+      }
+      const compatible = !!(planned && planned.ok);
+      const display = forgeDisplaySlot(forgeSlot, { compatible, listensRoom: !!(planned && planned.listensRoom) });
+      const surfaces = planned && Array.isArray(planned.surfaces) ? planned.surfaces : ['missing'];
+      if (!compatible) {
+        const listed = surfaces.length ? ` 用到了这里没有的接口：${surfaces.join('、')}。` : '';
+        const listedEn = surfaces.length ? ` Unsupported surfaces: ${surfaces.join(', ')}.` : '';
+        const capacity = surfaces.includes('room.capacity');
+        skip(`client.panels:${title}#module`, `面板「${title}」的脚本 ${module || '(none)'} 没有复制；需要改写成 postMessage API v1。${listed}${capacity ? ' 本服固定 4 个席位，没有扩容或房间容量设置。' : ''}`, `Panel "${title}" script ${module || '(none)'} was not copied; rewrite it to postMessage API v1.${listedEn}${capacity ? ' This server has four fixed seats and no room-capacity setting.' : ''}`, 'PLUGIN_FORGE_PANEL_SCRIPT', undefined, surfaces.length ? { surfaces } : undefined);
+      }
+      if (blocked) {
+        const where = display.slot || display.suggested || 'room.panel';
+        manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot: where });
+        skip(`client.panels:${title}#mount`, `面板「${title}」在 ${forgeSlot} 改写页面组件，需要人工适配为 ${where} 的只读面板。`, `Panel "${title}" at ${forgeSlot} rewrites a component; it needs manual adaptation as a read-only ${where} panel.`, 'PLUGIN_FORGE_MOUNT', 'panels');
+        continue;
+      }
+      // a stub panel's stylesheet is not copied (a copied panel carries its styles in its own bundle)
+      if (!compatible) {
+        const styles = Array.isArray(panel.styles) ? panel.styles : typeof panel.styles === 'string' ? [panel.styles] : [];
+        for (const rel of styles) {
+          if (typeof rel !== 'string' || !rel) continue;
+          const found = lookup(files, rel);
+          if (found) used.add(found);
+          skip(`client.panels:${title}#styles`, `面板「${title}」的样式表 ${rel} 没有复制；关掉动画之类的效果需要人工适配。`, `Panel "${title}" stylesheet ${rel} was not copied; effects such as turning animations off need manual adaptation.`, 'PLUGIN_FORGE_PANEL_SCRIPT');
+        }
+      }
+      if (!display.slot) {
+        const suggestedSlot = display.suggested || PANEL_REWRITE[forgeSlot] || 'room.panel';
+        manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot });
+        skip(`client.panels:${title}#mount`, `面板「${title}」挂载点 ${forgeSlot || '(none)'} 需要人工适配，可改写到 ${suggestedSlot}（位置与原版不同）。`, `Panel "${title}" at Forge mount ${forgeSlot || '(none)'} needs manual adaptation; consider rewriting for ${suggestedSlot} (a different location).`, 'PLUGIN_FORGE_MOUNT', 'panels');
+        continue;
+      }
+      if (!compatible) {
+        if ((slotUses.get(display.slot) || 0) > 0) {
+          manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot: display.slot });
+          skip(`client.panels:${title}#mount`, `面板「${title}」在 ${forgeSlot} 对应的 ${display.slot} 插槽已有面板，需要人工合并。`, `Panel "${title}" at ${forgeSlot} maps to occupied slot ${display.slot}; it needs manual adaptation into the existing panel.`, 'PLUGIN_FORGE_MOUNT', 'panels');
+          continue;
+        }
+        slotUses.set(display.slot, 1);
         manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot: display.slot });
-        skip(`client.panels:${title}#mount`, `面板「${title}」在 ${forgeSlot} 对应的 ${display.slot} 插槽已有面板，需要人工合并。`, `Panel "${title}" at ${forgeSlot} maps to occupied slot ${display.slot}; it needs manual adaptation into the existing panel.`, 'PLUGIN_FORGE_MOUNT', 'panels');
+        noteDrop('panels');
+        panels.push({ slot: display.slot, module, title: shortTitle, role: `ui:${display.slot}`, copied: false });
+        rewrittenAssets.push(`${forgeSlot} → ${display.slot}`);
         continue;
       }
-      slotUses.set(display.slot, 1);
-      manualPanels.push({ panel: title, mount: forgeSlot, suggestedSlot: display.slot });
-      noteDrop('panels');
-      panels.push({ slot: display.slot, module, title: shortTitle, role: `ui:${display.slot}`, copied: false });
+      const n = (slotUses.get(display.slot) || 0) + 1;
+      slotUses.set(display.slot, n);
+      const role = n === 1 ? `ui:${display.slot}` : `ui:${display.slot}-${n}`;
+      assume('forge-panel', '只读面板在浏览器的沙箱 iframe 里运行；导入时没有执行它的脚本。', 'A read-only panel runs in the browser sandbox iframe; its script was not executed at import.');
+      if (display.assumed) assume('panel-slot', `面板「${title}」的挂载点 ${forgeSlot} 按建议显示在 ${display.slot}（不是原位置）。`, `Panel "${title}" at ${forgeSlot} is shown in ${display.slot} (not Forge's position).`);
+      for (const copy of planned.copies || []) used.add(copy.src);
+      panels.push({
+        slot: display.slot, module, title: shortTitle, role, copied: true,
+        bundle: planned.bundle || '', css: planned.css || '', marker: display.marker, copies: planned.copies || [],
+        strings: uiStrings(), declared: planned.declared || [], packId: typeof pack.id === 'string' ? pack.id : base,
+      });
       rewrittenAssets.push(`${forgeSlot} → ${display.slot}`);
-      continue;
     }
-    const n = (slotUses.get(display.slot) || 0) + 1;
-    slotUses.set(display.slot, n);
-    const role = n === 1 ? `ui:${display.slot}` : `ui:${display.slot}-${n}`;
-    assume('forge-panel', '只读面板在浏览器的沙箱 iframe 里运行；导入时没有执行它的脚本。', 'A read-only panel runs in the browser sandbox iframe; its script was not executed at import.');
-    if (display.assumed) assume('panel-slot', `面板「${title}」的挂载点 ${forgeSlot} 按建议显示在 ${display.slot}（不是原位置）。`, `Panel "${title}" at ${forgeSlot} is shown in ${display.slot} (not Forge's position).`);
-    for (const copy of planned.copies || []) used.add(copy.src);
-    panels.push({
-      slot: display.slot, module, title: shortTitle, role, copied: true,
-      bundle: planned.bundle || '', css: planned.css || '', marker: display.marker, copies: planned.copies || [],
-      strings: uiStrings(), declared: planned.declared || [], packId: typeof pack.id === 'string' ? pack.id : base,
-    });
-    rewrittenAssets.push(`${forgeSlot} → ${display.slot}`);
-  }
 
-  for (const [rel] of files) {
-    if (used.has(rel)) continue;
-    const ext = extOf(rel);
-    if (SCRIPT_EXT.has(ext) || ext === '.spresources') {
-      skip(rel, '这是脚本或引擎资源，导入时不执行、也不复制。', 'This is a script or an engine resource. The importer does not run it and does not copy it.', 'PLUGIN_FORGE_SCRIPT');
-      continue;
-    }
-    // an unreferenced audio file whose name is exactly a bgm track
-    const baseName = rel.split('/').pop()?.replace(/\.[^.]+$/, '') || '';
-    if (AUDIO_EXT.has(ext) && ['lobby', 'prep', 'combat', 'unite', 'boss'].includes(baseName) && !getPath(assets, ['audio', 'bgm', baseName])) {
-      const dest = destOf(rel);
-      if (dest) {
-        assume('loose-bgm', `没有被 pack.json 引用、但文件名是音轨的 ${rel} 写入了 audio.bgm.${baseName}。`, `${rel} is not referenced by pack.json, but its name is a music track, so it was written to audio.bgm.${baseName}.`);
-        setAt(assets, ['audio', 'bgm', baseName], { loop: dest });
-        remember(rel, dest);
-        used.add(rel);
-        importedAssets.push(`audio.bgm.${baseName} ← ${rel}`);
+    for (const [rel] of files) {
+      if (used.has(rel)) continue;
+      const ext = extOf(rel);
+      if (SCRIPT_EXT.has(ext) || ext === '.spresources') {
+        skip(rel, '这是脚本或引擎资源，导入时不执行、也不复制。', 'This is a script or an engine resource. The importer does not run it and does not copy it.', 'PLUGIN_FORGE_SCRIPT');
         continue;
       }
-    }
-    skip(rel, '文件在包里，但 pack.json 没有引用它，没有导入。', 'The file is in the pack, but pack.json does not reference it, so it was not imported.');
-  }
-
-  assertNoPrefixClash(media.keys());
-  const destCase = new Map();
-  for (const dest of media.keys()) noteCase(destCase, dest);
-  const rewriteKey = (table, map, label, renamed = new Map()) => {
-    if (!table || typeof table !== 'object' || Array.isArray(table)) return;
-    for (const [from, to] of map) {
-      if (typeof from !== 'string' || typeof to !== 'string' || !from || from === to || DANGER_KEYS.has(from) || DANGER_KEYS.has(to)) continue;
-      if (!has(table, from)) continue;
-      if (!isAssetKey(to)) continue;
-      if (has(table, to)) {
-        skip(`${label}:${from}`, `改名后的键 ${to} 已经有素材，${from} 没有并进去。`, `The renamed key ${to} already has assets, so ${from} was not merged into it.`);
-        continue;
+      // an unreferenced audio file whose name is exactly a bgm track
+      const baseName = rel.split('/').pop()?.replace(/\.[^.]+$/, '') || '';
+      if (AUDIO_EXT.has(ext) && ['lobby', 'prep', 'combat', 'unite', 'boss'].includes(baseName) && !getPath(assets, ['audio', 'bgm', baseName])) {
+        const dest = destOf(rel);
+        if (dest) {
+          assume('loose-bgm', `没有被 pack.json 引用、但文件名是音轨的 ${rel} 写入了 audio.bgm.${baseName}。`, `${rel} is not referenced by pack.json, but its name is a music track, so it was written to audio.bgm.${baseName}.`);
+          setAt(assets, ['audio', 'bgm', baseName], { loop: dest });
+          remember(rel, dest);
+          used.add(rel);
+          importedAssets.push(`audio.bgm.${baseName} ← ${rel}`);
+          continue;
+        }
       }
-      table[to] = table[from];
-      delete table[from];
-      renamed.set(from, to);
-      rewrittenAssets.push(`${label}.${from} → ${to}`);
+      skip(rel, '文件在包里，但 pack.json 没有引用它，没有导入。', 'The file is in the pack, but pack.json does not reference it, so it was not imported.');
     }
-  };
-  const artRenames = new Map(), voiceRenames = new Map(), iconRenames = new Map();
-  rewriteKey(assets.chars, charIds, 'art.chars', artRenames);
-  rewriteKey(assets.enemies, enemyIds, 'art.enemies');
-  rewriteKey(assets.skills, skillIds, 'art.skills', iconRenames);
-  rewriteKey(assets.bonds, gameplay.ids, 'art.bonds');
-  rewriteKey(assets.bands, gameplay.ids, 'art.bands');
-  if (assets.audio && typeof assets.audio === 'object') {
-    for (const tree of ['voiceJp', 'voiceEn', 'voiceKr']) rewriteKey(assets.audio[tree], charIds, `audio.${tree}`, voiceRenames);
-    rewriteKey(assets.audio.voice, charIds, 'audio.voice', voiceRenames);
-    if (assets.audio.sfx && typeof assets.audio.sfx === 'object') rewriteKey(assets.audio.sfx.units, charIds, 'audio.sfx.units');
+    return { panels, manualPanels };
   }
 
-  // Asset tables and compact sidecars must use the same rewritten keys.
-  const artKey = (id, ids) => ids.get(id) ?? (/_([12])$/.test(id) && ids.has(id.slice(0, -2)) ? ids.get(id.slice(0, -2)) + id.slice(-2) : id);
-  for (const op of operators) {
-    if (op.art?.ref) {
-      const before = op.art.ref;
-      op.art.ref = artKey(before, artRenames);
-      if (op.art.ref !== before || voiceRenames.has(before)) {
-        op.art.assets ??= {};
-        op.art.assets.voice ??= before;
+  /** Rewrite asset keys onto the mapped ids, validate the overlay as a whole, and report the permissions it needs. */
+  function finalizeForgeArt() {
+    assertNoPrefixClash(media.keys());
+    const destCase = new Map();
+    for (const dest of media.keys()) noteCase(destCase, dest);
+    const rewriteKey = (table, map, label, renamed = new Map()) => {
+      if (!table || typeof table !== 'object' || Array.isArray(table)) return;
+      for (const [from, to] of map) {
+        if (typeof from !== 'string' || typeof to !== 'string' || !from || from === to || DANGER_KEYS.has(from) || DANGER_KEYS.has(to)) continue;
+        if (!has(table, from)) continue;
+        if (!isAssetKey(to)) continue;
+        if (has(table, to)) {
+          skip(`${label}:${from}`, `改名后的键 ${to} 已经有素材，${from} 没有并进去。`, `The renamed key ${to} already has assets, so ${from} was not merged into it.`);
+          continue;
+        }
+        table[to] = table[from];
+        delete table[from];
+        renamed.set(from, to);
+        rewrittenAssets.push(`${label}.${from} → ${to}`);
+      }
+    };
+    const artRenames = new Map(), voiceRenames = new Map(), iconRenames = new Map();
+    rewriteKey(assets.chars, charIds, 'art.chars', artRenames);
+    rewriteKey(assets.enemies, enemyIds, 'art.enemies');
+    rewriteKey(assets.skills, skillIds, 'art.skills', iconRenames);
+    rewriteKey(assets.bonds, gameplay.ids, 'art.bonds');
+    rewriteKey(assets.bands, gameplay.ids, 'art.bands');
+    if (assets.audio && typeof assets.audio === 'object') {
+      for (const tree of ['voiceJp', 'voiceEn', 'voiceKr']) rewriteKey(assets.audio[tree], charIds, `audio.${tree}`, voiceRenames);
+      rewriteKey(assets.audio.voice, charIds, 'audio.voice', voiceRenames);
+      if (assets.audio.sfx && typeof assets.audio.sfx === 'object') rewriteKey(assets.audio.sfx.units, charIds, 'audio.sfx.units');
+    }
+
+    // Asset tables and compact sidecars must use the same rewritten keys.
+    const artKey = (id, ids) => ids.get(id) ?? (/_([12])$/.test(id) && ids.has(id.slice(0, -2)) ? ids.get(id.slice(0, -2)) + id.slice(-2) : id);
+    for (const op of operators) {
+      if (op.art?.ref) {
+        const before = op.art.ref;
+        op.art.ref = artKey(before, artRenames);
+        if (op.art.ref !== before || voiceRenames.has(before)) {
+          op.art.assets ??= {};
+          op.art.assets.voice ??= before;
+        }
+      }
+      for (const [key, id] of Object.entries(op.art?.assets ?? {})) op.art.assets[key] = artKey(id, key.startsWith('skillIcon') ? iconRenames : key.startsWith('voice') ? voiceRenames : artRenames);
+    }
+
+    let assetNeed = [];
+    if (Object.keys(assets).length) {
+      const trial = readAssetOverlay(assets, { vanilla: manifestArt, permissions: ['assets.override', 'assets.add'], has: () => true });
+      if (trial.problems.length) {
+        skip('art', `外观叠加没有通过校验（${trial.problems[0]}），整份外观没有导入。`, `The asset overlay did not pass (${trial.problems[0]}), so none of the art was imported.`);
+        for (const k of Object.keys(assets)) delete assets[k];
+        media.clear();
+      } else if (trial.warnings.length) {
+        skip('art', `外观叠加有警告（${trial.warnings[0]}），严格检查通不过，整份外观没有导入。`, `The asset overlay has a warning (${trial.warnings[0]}). Strict check would fail, so none of the art was imported.`);
+        for (const k of Object.keys(assets)) delete assets[k];
+        media.clear();
+      } else if (manifestArt) {
+        const need = new Set();
+        for (const op of trial.ops) {
+          if (op.implied) continue;
+          const depth = ASSET_CONTAINERS.find((c) => c.path.every((k, i) => op.at[i] === k))?.path.length ?? 1;
+          need.add(getPath(manifestArt, op.at.slice(0, depth + 1)) !== undefined ? 'assets.override' : 'assets.add');
+        }
+        assetNeed = [...need];
+      } else assetNeed = ['assets.add'];
+    }
+    return assetNeed;
+  }
+
+  /** fx silent phases → the asset overlay, then the plugin roles this pack produced. */
+  function planForgeRoles() {
+    // Forge WORKSHOP §1.19: union with the renderer's built-in silent phases; no script is read or run.
+    if (isObj(pack.fx) && Array.isArray(pack.fx.silentPhases)) {
+      const names = pack.fx.silentPhases;
+      if (names.length <= 128 && names.every(v => typeof v === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(v))) {
+        if (names.length) { assets.fx = { silentPhases: [...new Set(names)] }; importedAssets.push('fx.silentPhases'); }
+      } else skip('fx.silentPhases', '静态相位名称无效或超过 128 项，没有导入。', 'Invalid phase names or more than 128 entries; not imported.');
+      for (const key of Object.keys(pack.fx)) if (key !== 'silentPhases') skip(`fx.${key}`, '这个特效字段没有 Forge 对应项，没有导入。', 'This effect field has no Forge equivalent; not imported.');
+    }
+
+    /** @type {string[]} */
+    const roles = [];
+    const contentI18n = translations.filter((t) => t.kind === 'content');
+    const hasContent = gameplayRecords.length || patches.length || operators.length || enemyRecords.length || contentI18n.length || !!importedRules;
+    if (hasContent) roles.push('content');
+    if (Object.keys(assets).length && (media.size || assets.fx)) roles.push('cosmetic');
+    if (!roles.includes('cosmetic') && themeVars && Object.keys(themeVars).length) roles.push('cosmetic');
+    if (scriptPlan) roles.push('script');
+    for (const panel of panels) roles.push(panel.role || `ui:${panel.slot}`);
+    for (const t of translations.filter((x) => x.kind === 'ui')) roles.push(`lang:${t.lang}`);
+    if (!roles.length && notices.length) roles.push('cosmetic');
+    return { roles, contentI18n };
+  }
+
+  function planForgeDroppedArt() {
+    // Art keys differ from record ids: chess → charId, items → trap/icon, bonds → bond id (WORKSHOP §1.4).
+    // [ASSUMED] Shared art still has a target if another retained record uses it. Whole-record drops only;
+    // a kit or panel being skipped cannot make an imported operator's art bare. Audio alone is never bare.
+    const droppedArt = new Set(), liveArt = new Set();
+    const visualKeys = (name, id, rec) => {
+      const bucket = name === 'chess' || name === 'units' ? 'chars' : name;
+      const keys = bucket === 'chars' ? [rec?.charId || (name === 'units' ? id : null)]
+        : name === 'items' ? [id, rec?.trapId, rec?.iconId, rec?.icon] : [id];
+      return keys.filter(k => typeof k === 'string' && k).map(k => `${bucket}:${k}`);
+    };
+    for (const name of ['chess', 'units', 'items', 'bonds', 'bands', 'tokens']) {
+      // A dropped duplicate may still point at art used by the installation's existing records.
+      for (const [id, rec] of Object.entries(table(name) || {})) for (const key of visualKeys(name, id, rec)) liveArt.add(key);
+      let records = {};
+      try { records = asMap(loadTableFile(files, used, name), name === 'chess' ? 'chessId' : name === 'units' ? 'charId' : 'id'); } catch { /* already reported */ }
+      const parents = new Map();
+      if (name === 'chess') for (const [id, rec] of Object.entries(records)) {
+        for (const target of [rec?.upgradeChessId, rec?.goldenId]) if (target && target !== id) parents.set(target, id);
+      }
+      for (const [id, rec] of Object.entries(records)) {
+        const base = typeof rec?.baseId === 'string' ? rec.baseId : parents.get(id) ?? id.replace(/_b$/, '_a');
+        const target = droppedIds.has(`${name}:${id}`) || droppedIds.has(`${name}:${base}`) ? droppedArt : liveArt;
+        for (const key of visualKeys(name, id, rec)) target.add(key);
       }
     }
-    for (const [key, id] of Object.entries(op.art?.assets ?? {})) op.art.assets[key] = artKey(id, key.startsWith('skillIcon') ? iconRenames : key.startsWith('voice') ? voiceRenames : artRenames);
+    const bareKey = key => droppedArt.has(key) && !liveArt.has(key);
+    const asked = [];
+    if (isObj(pack.art)) for (const t of ['chars', 'enemies', 'tokens', 'bonds', 'bands', 'items']) if (isObj(pack.art[t])) asked.push(...Object.keys(pack.art[t]).map(k => `${t}:${k}`));
+    if (isObj(pack.bondIcons)) asked.push(...Object.keys(pack.bondIcons).map(k => `bonds:${k}`));
+    if (isObj(pack.itemIcons)) asked.push(...Object.keys(pack.itemIcons).map(k => `items:${k}`));
+    const kept = [];
+    for (const bucket of ['chars', 'enemies', 'tokens', 'bonds', 'bands', 'items', 'skills', 'modules']) if (isObj(assets[bucket])) kept.push(...Object.keys(assets[bucket]).map(k => `${bucket}:${k}`));
+    const cosmeticBare = asked.length > 0 && asked.every(bareKey) && kept.every(bareKey);
+    return cosmeticBare;
   }
-
-  let assetNeed = [];
-  if (Object.keys(assets).length) {
-    const trial = readAssetOverlay(assets, { vanilla: manifestArt, permissions: ['assets.override', 'assets.add'], has: () => true });
-    if (trial.problems.length) {
-      skip('art', `外观叠加没有通过校验（${trial.problems[0]}），整份外观没有导入。`, `The asset overlay did not pass (${trial.problems[0]}), so none of the art was imported.`);
-      for (const k of Object.keys(assets)) delete assets[k];
-      media.clear();
-    } else if (trial.warnings.length) {
-      skip('art', `外观叠加有警告（${trial.warnings[0]}），严格检查通不过，整份外观没有导入。`, `The asset overlay has a warning (${trial.warnings[0]}). Strict check would fail, so none of the art was imported.`);
-      for (const k of Object.keys(assets)) delete assets[k];
-      media.clear();
-    } else if (manifestArt) {
-      const need = new Set();
-      for (const op of trial.ops) {
-        if (op.implied) continue;
-        const depth = ASSET_CONTAINERS.find((c) => c.path.every((k, i) => op.at[i] === k))?.path.length ?? 1;
-        need.add(getPath(manifestArt, op.at.slice(0, depth + 1)) !== undefined ? 'assets.override' : 'assets.add');
-      }
-      assetNeed = [...need];
-    } else assetNeed = ['assets.add'];
-  }
-
-  // Forge WORKSHOP §1.19: union with the renderer's built-in silent phases; no script is read or run.
-  if (isObj(pack.fx) && Array.isArray(pack.fx.silentPhases)) {
-    const names = pack.fx.silentPhases;
-    if (names.length <= 128 && names.every(v => typeof v === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(v))) {
-      if (names.length) { assets.fx = { silentPhases: [...new Set(names)] }; importedAssets.push('fx.silentPhases'); }
-    } else skip('fx.silentPhases', '静态相位名称无效或超过 128 项，没有导入。', 'Invalid phase names or more than 128 entries; not imported.');
-    for (const key of Object.keys(pack.fx)) if (key !== 'silentPhases') skip(`fx.${key}`, '这个特效字段没有 Forge 对应项，没有导入。', 'This effect field has no Forge equivalent; not imported.');
-  }
-
-  /** @type {string[]} */
-  const roles = [];
-  const contentI18n = translations.filter((t) => t.kind === 'content');
-  const hasContent = gameplayRecords.length || patches.length || operators.length || enemyRecords.length || contentI18n.length || !!importedRules;
-  if (hasContent) roles.push('content');
-  if (Object.keys(assets).length && (media.size || assets.fx)) roles.push('cosmetic');
-  if (!roles.includes('cosmetic') && themeVars && Object.keys(themeVars).length) roles.push('cosmetic');
-  if (scriptPlan) roles.push('script');
-  for (const panel of panels) roles.push(panel.role || `ui:${panel.slot}`);
-  for (const t of translations.filter((x) => x.kind === 'ui')) roles.push(`lang:${t.lang}`);
-  if (!roles.length && notices.length) roles.push('cosmetic');
-
-  // Art keys differ from record ids: chess → charId, items → trap/icon, bonds → bond id (WORKSHOP §1.4).
-  // [ASSUMED] Shared art still has a target if another retained record uses it. Whole-record drops only;
-  // a kit or panel being skipped cannot make an imported operator's art bare. Audio alone is never bare.
-  const droppedArt = new Set(), liveArt = new Set();
-  const visualKeys = (name, id, rec) => {
-    const bucket = name === 'chess' || name === 'units' ? 'chars' : name;
-    const keys = bucket === 'chars' ? [rec?.charId || (name === 'units' ? id : null)]
-      : name === 'items' ? [id, rec?.trapId, rec?.iconId, rec?.icon] : [id];
-    return keys.filter(k => typeof k === 'string' && k).map(k => `${bucket}:${k}`);
-  };
-  for (const name of ['chess', 'units', 'items', 'bonds', 'bands', 'tokens']) {
-    // A dropped duplicate may still point at art used by the installation's existing records.
-    for (const [id, rec] of Object.entries(table(name) || {})) for (const key of visualKeys(name, id, rec)) liveArt.add(key);
-    let records = {};
-    try { records = asMap(loadTableFile(files, used, name), name === 'chess' ? 'chessId' : name === 'units' ? 'charId' : 'id'); } catch { /* already reported */ }
-    const parents = new Map();
-    if (name === 'chess') for (const [id, rec] of Object.entries(records)) {
-      for (const target of [rec?.upgradeChessId, rec?.goldenId]) if (target && target !== id) parents.set(target, id);
-    }
-    for (const [id, rec] of Object.entries(records)) {
-      const base = typeof rec?.baseId === 'string' ? rec.baseId : parents.get(id) ?? id.replace(/_b$/, '_a');
-      const target = droppedIds.has(`${name}:${id}`) || droppedIds.has(`${name}:${base}`) ? droppedArt : liveArt;
-      for (const key of visualKeys(name, id, rec)) target.add(key);
-    }
-  }
-  const bareKey = key => droppedArt.has(key) && !liveArt.has(key);
-  const asked = [];
-  if (isObj(pack.art)) for (const t of ['chars', 'enemies', 'tokens', 'bonds', 'bands', 'items']) if (isObj(pack.art[t])) asked.push(...Object.keys(pack.art[t]).map(k => `${t}:${k}`));
-  if (isObj(pack.bondIcons)) asked.push(...Object.keys(pack.bondIcons).map(k => `bonds:${k}`));
-  if (isObj(pack.itemIcons)) asked.push(...Object.keys(pack.itemIcons).map(k => `items:${k}`));
-  const kept = [];
-  for (const bucket of ['chars', 'enemies', 'tokens', 'bonds', 'bands', 'items', 'skills', 'modules']) if (isObj(assets[bucket])) kept.push(...Object.keys(assets[bucket]).map(k => `${bucket}:${k}`));
-  const cosmeticBare = asked.length > 0 && asked.every(bareKey) && kept.every(bareKey);
 
   const meta = { base, packName, version, description, credits, authors, license, requires, conflicts, assets, media, assetNeed, patches, operators, enemyRecords, gameplayRecords, contentI18n, panels, manualPanels, manualReasons, translations: translations.filter((t) => t.kind === 'ui'), importedAssets, rewrittenAssets, importedData, rewrittenData, skipped, assumed, script: scriptPlan, packId: typeof pack.id === 'string' ? pack.id : base, dropped, cosmeticBare, themeVars, notices, rules: importedRules, officialNeeded: [...officialNeeded], officialTables: [] };
   return { meta, roles };

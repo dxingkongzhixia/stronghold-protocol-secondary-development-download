@@ -1,6 +1,4 @@
 {
   "limit": 300,
-  "functions": {
-    "server/plugins/forgeImport.js::planForgeImport": 666
-  }
+  "functions": {}
 }
