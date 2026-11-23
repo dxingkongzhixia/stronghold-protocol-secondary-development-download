@@ -6,7 +6,7 @@
 //   npm test                      the suite without the golden corpus checks
 //   npm test -- --with-golden     include them
 //   TEST_CONCURRENCY=8 npm test   worker count (default 4: the suite's CPU-bound files thrash above that)
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,5 +25,20 @@ const args = [
 ];
 const env = withGolden ? process.env : { ...process.env, SP_SKIP_GOLDEN: '1' };
 console.log(`[test] concurrency ${concurrency}${withGolden ? ' (incl. golden)' : ' (golden: npm run test:golden)'}`);
-const r = spawnSync(process.execPath, args, { stdio: 'inherit', cwd: ROOT, env });
-process.exit(r.status ?? 1);
+// The runtime skip count, against the 2026-11-23 baseline: informational only (docs/TESTING-PLAN.md WS3). A skip that
+// grows is a decision to make in review, not a reason to fail a green suite.
+const SKIP_BASELINE = 90;
+const child = spawn(process.execPath, args, { cwd: ROOT, env, stdio: ['inherit', 'pipe', 'inherit'] });
+let tail = '';
+child.stdout.on('data', (chunk) => {
+  process.stdout.write(chunk);
+  tail = (tail + chunk.toString()).slice(-16384);
+});
+child.on('exit', (code) => {
+  const skipped = [...tail.matchAll(/\bskipped (\d+)/g)].pop();
+  if (skipped) {
+    const n = Number(skipped[1]);
+    console.log(`[test] runtime skips: ${n} (baseline ${SKIP_BASELINE}${n > SKIP_BASELINE ? ', ABOVE — a new skip needs a reason' : ''})`);
+  }
+  process.exit(code ?? 1);
+});

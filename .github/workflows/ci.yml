@@ -184,14 +184,14 @@ jobs:
           path: test/e2e/out/mobile
           if-no-files-found: ignore
 
-  # The browser smoke: 24 mock-harness suites that need no game assets (the main job keeps SP_E2E=0). test/ui has ~48
-  # e2e files in the same position; this job pins the ones that are green today, so a broken client module import, CSP
-  # change, pre-game screen, shop/ready/co-op/settlement surface or a lost visual state is caught here instead of by
-  # hand. Each file gets its own browser and they run sequentially (~5–6 min on a runner); keep the timeout above that.
-  browser-smoke:
-    name: browser smoke (mock harness)
+  # The browser smoke, split in two jobs so they run in parallel: 24 mock-harness suites need no game assets (the main
+  # job keeps SP_E2E=0). `pre` is the pre-game / hub, `match` the in-match mock and the visual contract. Together they
+  # must stay under the 8-minute wall-clock budget (each job is ~3-4 minutes on a runner). test/ci.test.js checks the
+  # two step names against tools/ci.mjs; screenshots are uploaded even on failure so a red suite has evidence.
+  browser-smoke-pre:
+    name: browser smoke (pre-game)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
@@ -209,7 +209,48 @@ jobs:
           install-chromedriver: false
 
       # tools/browser-smoke.mjs sets SP_E2E=1 and resolves Chrome (CHROME_PATH here, platform defaults locally)
-      - name: Browser smoke (pre-game, in-match and the visual contract)
-        run: npm run test:browser:smoke
+      - name: Browser smoke (pre-game and the hub)
+        run: npm run test:browser:smoke -- --group pre
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+
+      - name: Screenshots (evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-pre-screens
+          path: test/e2e/out
+          if-no-files-found: ignore
+
+  browser-smoke-match:
+    name: browser smoke (in-match)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          install-chromedriver: false
+
+      - name: Browser smoke (in-match and the visual contract)
+        run: npm run test:browser:smoke -- --group match
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+
+      - name: Screenshots (evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-match-screens
+          path: test/e2e/out
+          if-no-files-found: ignore

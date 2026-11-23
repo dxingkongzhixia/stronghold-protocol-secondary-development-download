@@ -23,7 +23,7 @@
 - `test/golden/roster.json`
 - `test/golden/standins.json`
 
-## 浏览器 smoke（`npm run test:browser:smoke`，CI `browser-smoke` job）
+## 浏览器 smoke（`npm run test:browser:smoke`，CI `browser-smoke-pre` / `browser-smoke-match` jobs）
 
 - `test/ui/protocol-boot.e2e.test.js`
 - `test/ui/title-surfaces.e2e.test.js`

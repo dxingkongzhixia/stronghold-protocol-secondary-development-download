@@ -68,7 +68,8 @@ export const STEPS = [
   { id: 'golden', ci: { job: 'golden', name: 'Golden — default data' }, npm: 'golden', describe: 'node tools/golden.mjs' },
   { id: 'golden-versions', ci: { job: 'golden', name: 'Golden — 规程 (act3autochess@V3_1)' }, describe: 'node tools/golden.mjs --version act3autochess@V3_1' },
   { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
-  { id: 'browser-smoke', ci: { job: 'browser-smoke', name: 'Browser smoke (pre-game, in-match and the visual contract)' }, npm: 'test:browser:smoke', describe: 'node tools/browser-smoke.mjs' },
+  { id: 'browser-smoke-pre', ci: { job: 'browser-smoke-pre', name: 'Browser smoke (pre-game and the hub)' }, describe: 'npm run test:browser:smoke -- --group pre' },
+  { id: 'browser-smoke-match', ci: { job: 'browser-smoke-match', name: 'Browser smoke (in-match and the visual contract)' }, describe: 'npm run test:browser:smoke -- --group match' },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -344,7 +345,8 @@ function runStep(step, env) {
     case 'golden-tests': return node(['--test', 'test/golden.test.js', 'test/golden-versions.test.js', 'test/golden-diy.test.js', 'test/golden-standins.test.js'], env);
     case 'golden-versions': return node(['tools/golden.mjs', '--version', 'act3autochess@V3_1'], env);
     case 'mobile': return node(['tools/mobile-audit.mjs'], env);
-  case 'browser-smoke': return node(['tools/browser-smoke.mjs'], env);
+    case 'browser-smoke-pre': return node(['tools/browser-smoke.mjs', '--group', 'pre'], env);
+    case 'browser-smoke-match': return node(['tools/browser-smoke.mjs', '--group', 'match'], env);
     default: throw new Error(`no runner for step ${step.id}`);
   }
 }

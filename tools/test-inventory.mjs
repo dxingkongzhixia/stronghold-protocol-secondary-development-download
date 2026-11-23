@@ -89,7 +89,7 @@ export function renderInventory() {
     '',
     ...goldenFiles.map((f) => `- \`test/golden/${f}\``),
     '',
-    '## 浏览器 smoke（`npm run test:browser:smoke`，CI `browser-smoke` job）',
+    '## 浏览器 smoke（`npm run test:browser:smoke`，CI `browser-smoke-pre` / `browser-smoke-match` jobs）',
     '',
     ...SMOKE.map((f) => `- \`${f}\``),
     '',

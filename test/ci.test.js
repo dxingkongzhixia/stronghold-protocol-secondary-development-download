@@ -67,11 +67,11 @@ test('the commands match ci.yml: the run lines, the npm scripts ci.yml calls, th
     assert.deepEqual(j.env, job === 'test' ? CI_TEST_ENV : {}, `env of job ${job}`);
   }
   // per-step config (env, if, continue-on-error, working-directory, with, …) on a mirrored step is not mirrored —
-  // the browser smoke is the one exception: setup-chrome's binary path rides on that step's env (CHROME_PATH), and the
-  // local run resolves Chrome itself (tools/browser-smoke.mjs).
+  // the browser smoke steps are the one exception: setup-chrome's binary path rides on that step's env (CHROME_PATH),
+  // and the local run resolves Chrome itself (tools/browser-smoke.mjs).
   for (const l of STEPS) {
     const s = workflow.jobs[l.ci.job].steps.find((x) => x.name === l.ci.name);
-    assert.deepEqual(s.other || [], l.id === 'browser-smoke' ? ['env'] : [], `${l.id}: ci.yml step keys tools/ci.mjs does not mirror`);
+    assert.deepEqual(s.other || [], l.id.startsWith('browser-smoke') ? ['env'] : [], `${l.id}: ci.yml step keys tools/ci.mjs does not mirror`);
     assert.ok(!s.shell || l.id === 'smoke', `${l.id}: shell: ${s.shell}`);
   }
   assert.match(fs.readFileSync(path.join(ROOT, '.github/workflows/ci.yml'), 'utf8'),

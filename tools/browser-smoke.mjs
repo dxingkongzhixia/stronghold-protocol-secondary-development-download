@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// tools/browser-smoke.mjs — the small browser smoke the `browser-smoke` CI job runs: mock-harness pages only, no game
-// assets (the 720 MB public/assets pack is NOT needed), headless Chrome.
+// tools/browser-smoke.mjs — the browser smoke the `browser-smoke-pre` / `browser-smoke-match` CI jobs run: mock-harness
+// pages only, no game assets (the 720 MB public/assets pack is NOT needed), headless Chrome.
 //
-//   npm run test:browser:smoke            CI and local
+//   npm run test:browser:smoke                     every suite (local default)
+//   npm run test:browser:smoke -- --group pre      the pre-game / hub suites (CI job 1)
+//   npm run test:browser:smoke -- --group match    the in-match mock + the visual contract (CI job 2)
 //   CHROME_PATH=… npm run test:browser:smoke
 //
 // Chrome: $CHROME_PATH, else the platform's usual install (setup-chrome on CI puts it on PATH; `google-chrome` is also
@@ -73,9 +75,8 @@ export function resolveChrome(env = process.env, platform = process.platform) {
   return '';
 }
 
-/** The smoke run list: the single source of truth for the job and for docs/TEST-INVENTORY.md (tools/test-inventory.mjs). */
+/** The smoke run list: the single source of truth for the jobs and for docs/TEST-INVENTORY.md (tools/test-inventory.mjs). */
 export const RUNS = [
-  // pre-game and the hub
   ['test/ui/protocol-boot.e2e.test.js'],
   ['test/ui/title-surfaces.e2e.test.js'],
   ['test/ui/settings-entry.e2e.test.js'],
@@ -104,6 +105,42 @@ export const RUNS = [
   ['test/ui/visual-contract.e2e.test.js'],
 ];
 
+/** The pre-game / hub group (the first five suites). `--group match` is everything else. */
+export const PRE_GROUP = new Set([
+  'test/ui/protocol-boot.e2e.test.js',
+  'test/ui/title-surfaces.e2e.test.js',
+  'test/ui/settings-entry.e2e.test.js',
+  'test/ui/screen-fit.e2e.test.js',
+  'test/ui/hotkeys.e2e.test.js',
+]);
+
+/**
+ * The suites of one group. CI runs `pre` and `match` as two parallel jobs so the wall clock stays under the 8-minute
+ * budget; `all` is the local default.
+ * @param {'pre'|'match'|'all'} group
+ * @param {string[][]} runs
+ * @returns {string[][]}
+ */
+export function selectRuns(group = 'all', runs = RUNS) {
+  if (group === 'all') return runs;
+  return runs.filter((args) => {
+    const file = args.find((s) => s.endsWith('.js'));
+    return PRE_GROUP.has(file) === (group === 'pre');
+  });
+}
+
+/** `--group pre|match|all` (also `--group=…`), default `all`. */
+function groupArg(argv) {
+  const i = argv.indexOf('--group');
+  const raw = i >= 0 && argv[i + 1] ? argv[i + 1] : (argv.find((a) => a.startsWith('--group=')) || '').slice('--group='.length);
+  const group = raw || 'all';
+  if (!['pre', 'match', 'all'].includes(group)) {
+    console.error(`[browser-smoke] unknown --group ${group} (pre|match|all)`);
+    process.exit(2);
+  }
+  return /** @type {'pre'|'match'|'all'} */ (group);
+}
+
 const isMain = import.meta.url === new URL(process.argv[1] ?? '', 'file://').href || process.argv[1]?.endsWith('browser-smoke.mjs');
 if (isMain) {
   const chrome = resolveChrome();
@@ -113,10 +150,13 @@ if (isMain) {
   }
   const env = { ...process.env, CHROME_PATH: chrome, SP_E2E: '1' };
   console.log(`[browser-smoke] Chrome ${chrome}`);
-  // Run every suite even when one fails: a single red suite must not hide the result of the other 17, and the summary
+  // Run every suite even when one fails: a single red suite must not hide the result of the others, and the summary
   // below is what CI's log is read from. The exit code still fails the job when anything failed.
+  const group = groupArg(process.argv.slice(2));
+  const runs = selectRuns(group);
+  console.log(`[browser-smoke] group ${group} (${runs.length} suites)`);
   const results = [];
-  for (const args of RUNS) {
+  for (const args of runs) {
     console.log(`[browser-smoke] node --test ${args.join(' ')}`);
     const started = Date.now();
     const r = spawnSync(process.execPath, ['--test', '--test-timeout=600000', '--test-force-exit', ...args], { stdio: 'inherit', cwd: ROOT, env });

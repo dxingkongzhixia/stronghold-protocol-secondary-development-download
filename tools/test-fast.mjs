@@ -21,6 +21,14 @@ if (missing.length) {
   process.exit(2);
 }
 const started = Date.now();
+// A change under server/sim, shared or data usually moves the golden corpus, which this gate does not run (that is the
+// CI `golden` job / `npm run test:golden`). Say it instead of failing: the fast gate stays fast.
+if (!process.argv.includes('--test-name-pattern')) {
+  const dirty = spawnSync('git', ['status', '--porcelain', '--', 'server/sim', 'shared', 'data'], { cwd: ROOT, encoding: 'utf8' });
+  if (dirty.status === 0 && (dirty.stdout || '').trim()) {
+    console.log('[test:fast] hint: server/sim, shared or data changed — run `npm run test:golden` before committing (docs/TESTING.md §6)');
+  }
+}
 const r = spawnSync(process.execPath, ['--test', '--test-concurrency=4', ...process.argv.slice(2), ...files], {
   stdio: 'inherit', cwd: ROOT,
 });
