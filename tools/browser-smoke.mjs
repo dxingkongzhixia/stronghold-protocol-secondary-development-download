@@ -109,6 +109,8 @@ export const RUNS = [
   ['test/ui/visual-contract.e2e.test.js'],
   // + test/ui/text-scale.e2e.test.js — 文字大小: the HUD bar keeps its size while its text grows (2026-11-23 fix)
   ['test/ui/text-scale.e2e.test.js'],
+  // + test/ui/inspect-range.e2e.test.js — COMBAT: the open card lights the unit's attack range (rewritten 2026-11-23)
+  ['test/ui/inspect-range.e2e.test.js'],
 ];
 
 /** The pre-game / hub group (the first five suites). `--group match` is everything else. */

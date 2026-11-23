@@ -9,10 +9,10 @@
 | unit / integration | 904 | 8050 |
 | fast | 17 | 162 |
 | golden tests | 4 | 11 |
-| browser (opt-in) | 100 | 326 |
+| browser (opt-in) | 93 | 296 |
 | studio | 4 | 26 |
 | native (opt-in) | 3 | 5 |
-| **合计** | **1032** | **8580** |
+| **合计** | **1025** | **8550** |
 
 ## golden 语料文件
 
@@ -52,6 +52,7 @@
 - `test/ui/boss-plates.e2e.test.js`
 - `test/ui/visual-contract.e2e.test.js`
 - `test/ui/text-scale.e2e.test.js`
+- `test/ui/inspect-range.e2e.test.js`
 
 ## 素材 e2e（`npm run test:e2e:assets`，opt-in）
 

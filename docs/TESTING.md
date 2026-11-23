@@ -71,7 +71,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 单文件 / 单条 | `node --test test/match/bot.test.js` · `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden | `npm run test:golden` · `npm run golden` · `node tools/golden.mjs --update`（先归因） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim` |
-| 浏览器 smoke | `npm run test:browser:smoke`（27 组 mock，两组并行后各 ≤5 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
+| 浏览器 smoke | `npm run test:browser:smoke`（28 组 mock，两组并行后各 ≤5 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
 | 素材 e2e | `npm run test:e2e:assets`（需 `public/assets` + Chrome；`-- --native` 加三条 native） |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（整轮超时硬停 + 进程表，exit 3） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js` |
@@ -165,10 +165,27 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 **skip 预算**：`test/skip-budget.test.js` 统计**带原因的** skip 标记（`skip: '…'` / `t.skip(`，不含
 `skip: !ENABLED` 这类环境门），2026-11-23 为 **44**，只降不升；加一条 skip 必须同时删一条或下调预算。
 
-**第二轮分诊（2026-11-23，32 个未归属）**：`match-info` / `round30-tools` 进 smoke；其余 30 个登记在
-[`tools/e2e-lanes.mjs`](../tools/e2e-lanes.mjs) 的 `LOCAL_ONLY`（真服务器 + 美术、慢、或红），由
-`test/ui/e2e-lanes.test.js` 把关。仍红的是 `bond-audio`、`community-controls`（346 s）、`i18n`（206 s）、
-`modal`、`playtest2`（>5 分钟挂起）、`playtest5-ui`、`playtest6-ui`、`stats-overlay-css`——待修或删。
+**第二轮分诊（2026-11-23，32 个未归属）**：`match-info` / `round30-tools` 进 smoke；其余登记在
+[`tools/e2e-lanes.mjs`](../tools/e2e-lanes.mjs) 的 `LOCAL_ONLY`（真服务器 + 美术、慢、或需要产品结论），由
+`test/ui/e2e-lanes.test.js` 把关。
+
+**第三轮分诊（2026-11-23，8 个本地红）**：全部是**旧 UI 契约漂移**，不是线上功能故障。按 30 分钟法则删除；
+重加条件都是「按当前选择器 / 文案 / 注入方式重写，并走 `openMock()`」。
+
+| 用例 | 删除原因 | 重加条件 |
+|---|---|---|
+| `bond-audio` | 大厅模式卡 `.mode-card 独立模拟` 已不可点（大厅改版） | 按当前模式卡重写 |
+| `community-controls` | `[data-tab="diy"]` 不存在（社区页签改版） | 按当前页签重写 |
+| `i18n` | 语言切换钉死旧文案「开始」，现为「进入作战」 | 文案改为 key 断言，覆盖五种语言 |
+| `modal` | 共享 Modal 键盘边界的等待条件 5 s 超时 | 按当前 Modal 结构重写 |
+| `playtest2` | >5 分钟挂起（mock 注入与当前 harness 不符） | 改为驱动 mock 状态（`__MOCK__.mutate`） |
+| `playtest5-ui` | 「844×390: bench 0 89% free」布局断言失败（整备区改版） | 按当前整备区几何重写 |
+| `playtest6-ui` | `networkidle0` 导航超时（本轮未改用 `domcontentloaded`） | 用 `openMock()` 重写 |
+| `stats-overlay-css` | `.st .st-tab` 不存在（统计页改版） | 按当前统计页重写 |
+
+`inspect-range` 不是删除而是**重写**：原用例把真实战斗快照注入 PREP mock 页，而 harness 现在会覆盖 `match.public`
+并丢弃 prep 期间的战斗快照，屏幕停在 PREP；改用 mock 自带的 COMBAT 阶段后通过（范围数学仍由静态
+`test/ui/inspect-range.test.js` 覆盖）。
 
 ### 7.2 覆盖率基线（趋势，不设门槛）
 
@@ -192,7 +209,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `node 24 (guards)` | CI 布线 + 文档/打包门禁 | 轻量通道 |
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
 | `browser-smoke-pre` | `npm run test:browser:smoke -- --group pre` | 预游戏 + 大厅 + 本局信息 6 组，并行 job；截图 artifact |
-| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 20 组 + 视觉契约，并行 job；截图 artifact |
+| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 21 组 + 视觉契约，并行 job；截图 artifact |
 
 **夜间素材 lane**：`.github/workflows/nightly.yml` 每周一 02:00（北京）跑 `npm run test:e2e:assets`（真服务器 + 720 MB
 美术，5 个联机套件），上传 `test/e2e/out`；失败自动开一个 issue（已存在就不再开）。手动入口：Actions →
