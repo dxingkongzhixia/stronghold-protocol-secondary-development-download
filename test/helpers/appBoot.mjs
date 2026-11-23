@@ -25,9 +25,12 @@ export function appUrl(base, path = '/', extra = '') {
  * A page on the app, past the title screen unless `entered: false`, online.
  * @param {import('puppeteer-core').Browser} browser
  * @param {{ base: string, name?: string, viewport?: object, path?: string, entered?: boolean,
- *   prefs?: { lang?: string, textSize?: string, assetMode?: string } }} opts
+ *   prefs?: { lang?: string, textSize?: string, assetMode?: string },
+ *   storage?: Record<string, string>, setup?: (page: import('puppeteer-core').Page) => Promise<void> }} opts
+ *   `storage` seeds extra localStorage keys before the first script; `setup` runs on the page before the navigation
+ *   (request interception for a stale asset, an extra media emulation …).
  */
-export async function openApp(browser, { base, name = '测试博士', viewport = { width: 1600, height: 900 }, path = '/', entered = true, prefs = {} } = {}) {
+export async function openApp(browser, { base, name = '测试博士', viewport = { width: 1600, height: 900 }, path = '/', entered = true, prefs = {}, storage = {}, setup = null } = {}) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
   const { lang = 'zh-CN', textSize = 'md', assetMode = 'stream' } = prefs;
@@ -41,6 +44,12 @@ export async function openApp(browser, { base, name = '测试博士', viewport =
       if (entered) sessionStorage.setItem('sp.entered', '1');
     } catch { /* private mode */ }
   }, name, entered, lang, textSize, assetMode);
+  if (Object.keys(storage).length) {
+    await page.evaluateOnNewDocument((kv) => {
+      try { for (const [k, v] of Object.entries(kv)) localStorage.setItem(k, v); } catch { /* private mode */ }
+    }, storage);
+  }
+  if (setup) await setup(page);
   await page.goto(appUrl(base, path), { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => globalThis.__SP__?.store.get().connection.status === 'online', { timeout: 30000 });
   if (entered) await page.waitForSelector('.lobby-screen', { timeout: 15000 });

@@ -84,6 +84,8 @@ export const RUNS = [
   ['test/ui/hotkeys.e2e.test.js'],
   // + test/ui/match-info.e2e.test.js — the strategy draft's 本局信息 dialog (in the pre-game group: the draft is pre-battle)
   ['test/ui/match-info.e2e.test.js'],
+  // + test/ui/stats-overlay.e2e.test.js — 统计数据 overlay: fixed over a hidden lobby, cards from a seeded list (hub group)
+  ['test/ui/stats-overlay.e2e.test.js'],
   // in-match mock (shop, economy, round plates, co-op, settlement, boss)
   ['test/ui/ready-fold.e2e.test.js'],
   ['test/ui/shop-empty-slot.e2e.test.js'],
@@ -121,6 +123,7 @@ export const PRE_GROUP = new Set([
   'test/ui/screen-fit.e2e.test.js',
   'test/ui/hotkeys.e2e.test.js',
   'test/ui/match-info.e2e.test.js',
+  'test/ui/stats-overlay.e2e.test.js',
 ]);
 
 /**

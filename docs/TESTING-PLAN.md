@@ -28,7 +28,7 @@
 | 全量 `npm test` | 9505 用例 / 0 失败 / 90 跳过 / 439 s | 0 失败 / 跳过 ≤90 / ≤8 分钟 |
 | 快速档 `test:fast` | 183 用例 / 34 s | ≤2 分钟 |
 | 浏览器 smoke | pre 5/5（53 s）+ match 19/19（314 s），两个并行 job | 覆盖 ≥40/64，墙钟 ≤8 分钟 |
-| e2e 进 CI 比例 | **28 / 58（48%）**；其余 30 个已在 `tools/e2e-lanes.mjs` 登记归属 | 覆盖全部可无素材套件 |
+| e2e 进 CI 比例 | **29 / 58（50%）**；其余 29 个已在 `tools/e2e-lanes.mjs` 登记归属 | 覆盖全部可无素材套件 |
 | 素材 e2e（观战 / 替补 / 配装） | **0 次/CI** | 每周至少 1 次 |
 | 仍用 `networkidle0` 的 smoke 套件 | 18/24 | 新增为 0 |
 | 固定 `sleep`（`test/ui`） | 472 处 | 新增为 0 |
@@ -124,7 +124,7 @@
 - [x] Phase 0 · 2.3 browser-smoke 失败上传截图 artifact
 - [x] Phase 0 · 3.2 `npm test` 打印运行时 skip 与基线对比
 - [x] Phase 0 · 4.1 `test:fast` 的 golden 提示
-- [x] Phase 1 · 1.2 首轮分诊 32 个未归属 e2e（进 CI 4 个 → 28/58；其余 30 个全部登记 lane 与原因）
+- [x] Phase 1 · 1.2 首轮分诊 32 个未归属 e2e（进 CI 5 个 → 29/58；其余 29 个全部登记 lane 与原因）
 - [x] Phase 1 · 2.1 `openMock()` 助手 + 新增约束（`test/helpers/mockPage.mjs`）
 - [x] Phase 1 · 4.2 新 e2e 归属守卫（`tools/e2e-lanes.mjs` + `test/ui/e2e-lanes.test.js`）
 - [x] Phase 2 · 1.3 夜间素材 e2e job（`.github/workflows/nightly.yml`；首轮定时执行待下一个周一）

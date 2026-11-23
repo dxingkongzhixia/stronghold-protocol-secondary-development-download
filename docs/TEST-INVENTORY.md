@@ -9,10 +9,10 @@
 | unit / integration | 904 | 8050 |
 | fast | 17 | 162 |
 | golden tests | 4 | 11 |
-| browser (opt-in) | 93 | 296 |
+| browser (opt-in) | 94 | 298 |
 | studio | 4 | 26 |
 | native (opt-in) | 3 | 5 |
-| **合计** | **1025** | **8550** |
+| **合计** | **1026** | **8552** |
 
 ## golden 语料文件
 
@@ -31,6 +31,7 @@
 - `test/ui/screen-fit.e2e.test.js`
 - `test/ui/hotkeys.e2e.test.js`
 - `test/ui/match-info.e2e.test.js`
+- `test/ui/stats-overlay.e2e.test.js`
 - `test/ui/ready-fold.e2e.test.js`
 - `test/ui/shop-empty-slot.e2e.test.js`
 - `test/ui/mock.e2e.test.js`
