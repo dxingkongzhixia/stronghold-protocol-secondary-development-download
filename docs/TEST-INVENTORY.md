@@ -26,11 +26,23 @@
 ## 浏览器 smoke（`npm run test:browser:smoke`，CI `browser-smoke` job）
 
 - `test/ui/protocol-boot.e2e.test.js`
-- `test/ui/hotkeys.e2e.test.js`
+- `test/ui/title-surfaces.e2e.test.js`
 - `test/ui/settings-entry.e2e.test.js`
 - `test/ui/screen-fit.e2e.test.js`
-- `test/ui/title-surfaces.e2e.test.js`
+- `test/ui/hotkeys.e2e.test.js`
+- `test/ui/ready-fold.e2e.test.js`
+- `test/ui/shop-empty-slot.e2e.test.js`
 - `test/ui/mock.e2e.test.js`
+- `test/ui/refresh-tap.e2e.test.js`
+- `test/ui/quit-offline.e2e.test.js`
+- `test/ui/spectator-roster.e2e.test.js`
+- `test/ui/match-popups.e2e.test.js`
+- `test/ui/resultbox.e2e.test.js`
+- `test/ui/downed-plate.e2e.test.js`
+- `test/ui/terrain-tip.e2e.test.js`
+- `test/ui/turn-popup.e2e.test.js`
+- `test/ui/boss-plates.e2e.test.js`
+- `test/ui/visual-contract.e2e.test.js`
 
 ## 素材 e2e（`npm run test:e2e:assets`，opt-in）
 

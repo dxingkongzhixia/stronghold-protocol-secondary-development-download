@@ -67,7 +67,8 @@ export function resolveChrome(env = process.env, platform = process.platform) {
   return '';
 }
 
-const RUNS = [
+/** The smoke run list: the single source of truth for the job and for docs/TEST-INVENTORY.md (tools/test-inventory.mjs). */
+export const RUNS = [
   // pre-game and the hub
   ['test/ui/protocol-boot.e2e.test.js'],
   ['test/ui/title-surfaces.e2e.test.js'],

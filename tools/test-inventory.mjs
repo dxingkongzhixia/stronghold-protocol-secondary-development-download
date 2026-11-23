@@ -18,19 +18,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RUNS } from './browser-smoke.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT = 'docs/TEST-INVENTORY.md';
 
-/** The browser smoke files (tools/browser-smoke.mjs RUNS) and the asset lane (tools/e2e-assets.mjs FILES). */
-export const SMOKE = [
-  'test/ui/protocol-boot.e2e.test.js',
-  'test/ui/hotkeys.e2e.test.js',
-  'test/ui/settings-entry.e2e.test.js',
-  'test/ui/screen-fit.e2e.test.js',
-  'test/ui/title-surfaces.e2e.test.js',
-  'test/ui/mock.e2e.test.js',
-];
+/** The browser smoke files — the runner's own RUNS (the generated list cannot drift from what CI runs) — and the asset
+ * lane (tools/e2e-assets.mjs FILES). */
+export const SMOKE = RUNS.flat().filter((s) => s.endsWith('.js'));
 export const ASSETS = [
   'test/ui/standin.e2e.test.js',
   'test/ui/spectator.e2e.test.js',
