@@ -71,7 +71,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 单文件 / 单条 | `node --test test/match/bot.test.js` · `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden | `npm run test:golden` · `npm run golden` · `node tools/golden.mjs --update`（先归因） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim` |
-| 浏览器 smoke | `npm run test:browser:smoke`（26 组 mock，两组并行后各 ≤5 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
+| 浏览器 smoke | `npm run test:browser:smoke`（27 组 mock，两组并行后各 ≤5 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
 | 素材 e2e | `npm run test:e2e:assets`（需 `public/assets` + Chrome；`-- --native` 加三条 native） |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（整轮超时硬停 + 进程表，exit 3） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js` |
@@ -158,7 +158,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `emotes.e2e` 的 in-match 气泡 | 删除该条（UI kit 用例保留） | mock 的 `variant=emote` 只在启动时 `store.set` 一次 emote，气泡 3 s 过期；冷缓存下对局页挂载晚于 3 s，`.team__bubble` 永远等不到（30 s 超时） |
 | `capsule-motion.e2e` | 删除文件（静态侧 `test/ui/capsule-motion.test.js` 保留） | 三条用例都读 `/hudPanel/trans_*` 资源条目；远程镜像探测离线时先超时（5×15 s），场景看起来永远没加载 |
 | `inspect-range.e2e` | 删除文件 | 注入真实 COMBAT 快照后点击单位：`.dpanel` 出现，但 `.ff-tile.is-range` 不再出现；需产品侧确认 COMBAT 下是否还应高亮攻击范围 |
-| `text-scale.e2e` | 删除文件 | **真实问题**：特大字号下商店栏高 **145 → 164 px**（`844×390` 的 field / canvas 不变）；此外无 `?e2e=1` 时大厅入口卡在标题。修好商店栏尺寸后按 `?e2e=1` + 显式 `enterLobby()` 重写 |
+| `text-scale.e2e` | **已修复并恢复**（in-match 部分） | 真问题曾抓在 **145 → 164 px**（特大字号下商店栏被 funds 与 remain 的行高撑高）。修复：`game-shop.css` 给 `.funds` 固定 `2.24rem`、`.shopbar__remain` 固定行盒；`test/ui/text-scale.e2e.test.js` 已回 CI（match 组），旧 CSS 下会红。大厅/弹窗那半未恢复（冷启动进大厅要标题流程，mock 页不建模） |
 
 重加条件：气泡类 → mock 每 ≤1.5 s 重发或延长 TTL；美术类 → 先强制本地供图（上一行）；行为类 → 产品确认后按新契约重写。
 
@@ -192,7 +192,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `node 24 (guards)` | CI 布线 + 文档/打包门禁 | 轻量通道 |
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
 | `browser-smoke-pre` | `npm run test:browser:smoke -- --group pre` | 预游戏 + 大厅 + 本局信息 6 组，并行 job；截图 artifact |
-| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 19 组 + 视觉契约，并行 job；截图 artifact |
+| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 20 组 + 视觉契约，并行 job；截图 artifact |
 
 **夜间素材 lane**：`.github/workflows/nightly.yml` 每周一 02:00（北京）跑 `npm run test:e2e:assets`（真服务器 + 720 MB
 美术，5 个联机套件），上传 `test/e2e/out`；失败自动开一个 issue（已存在就不再开）。手动入口：Actions →

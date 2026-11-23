@@ -184,7 +184,7 @@ jobs:
           path: test/e2e/out/mobile
           if-no-files-found: ignore
 
-  # The browser smoke, split in two jobs so they run in parallel: 26 mock-harness suites need no game assets (the main
+  # The browser smoke, split in two jobs so they run in parallel: 27 mock-harness suites need no game assets (the main
   # job keeps SP_E2E=0). `pre` is the pre-game / hub, `match` the in-match mock and the visual contract. Together they
   # must stay under the 8-minute wall-clock budget (each job is ~3-4 minutes on a runner). test/ci.test.js checks the
   # two step names against tools/ci.mjs; screenshots are uploaded even on failure so a red suite has evidence.

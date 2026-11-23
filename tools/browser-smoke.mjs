@@ -107,6 +107,8 @@ export const RUNS = [
   ['test/ui/boss-plates.e2e.test.js'],
   // the visual contract (surfaces + ready / selected / disabled / danger state probes)
   ['test/ui/visual-contract.e2e.test.js'],
+  // + test/ui/text-scale.e2e.test.js — 文字大小: the HUD bar keeps its size while its text grows (2026-11-23 fix)
+  ['test/ui/text-scale.e2e.test.js'],
 ];
 
 /** The pre-game / hub group (the first five suites). `--group match` is everything else. */

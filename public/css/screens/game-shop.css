@@ -19,6 +19,9 @@
 .shopbar__tools { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: .06rem .12rem; }
 .shopbar__remain {
   grid-column: 1 / -1; justify-self: end; pointer-events: none;
+  /* The text scales with --t (readability), but the HUD box does not: a fixed line box keeps the bar's height at the
+     design's size (theme.css: --t must not move layout). 6.4 px text in .12rem content; 14 px text at 特大 still fits. */
+  height: .38rem; line-height: .3rem;
   font-size: calc(.16 * var(--t)); color: var(--text-md); padding: .04rem .14rem; background: rgba(8, 11, 10, .78);
   border-left: 3px solid var(--mint-500);
 }
@@ -167,7 +170,10 @@
 .scard--sold.scard--empty { background: rgba(8, 11, 10, .4); border-color: var(--line); }
 
 /* ---- funds card ---- */
-.funds { width: 1.92rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; padding: .06rem; border-left: 1px solid var(--line); }
+/* The card heights are fixed (same 2.24rem as .scard / .lvcard): at 特大 the labels' line boxes grow, and without a
+   height this column stretched the whole row (145 → 164 px shop bar measured). Text may overflow the card; the HUD
+   frame may not move. */
+.funds { width: 1.92rem; height: 2.24rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .08rem; padding: .06rem; border-left: 1px solid var(--line); }
 .funds__hex {
   position: relative; width: 1.16rem; height: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: linear-gradient(180deg, #3a3013, #1a1408); color: var(--gold);
