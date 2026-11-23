@@ -34,7 +34,7 @@
 | 固定 `sleep`（`test/ui`） | 472 处 | 新增为 0 |
 | 带原因的 skip | 44（门禁） | ≤44 |
 | 运行时 skip | 90 | ≤90 |
-| 覆盖率基线 | 无 | 有首次数字 + 月度对比 |
+| 覆盖率基线 | line 87.51% / branch 84.26% / funcs 87.99%（`server/sim` + `shared`） | 有首次数字 + 月度对比 |
 | 无自动化守护的行为 | 4 块 | ≤2 块（其余有产品结论） |
 
 ## 2. 工作流
@@ -127,7 +127,7 @@
 - [x] Phase 1 · 1.2 首轮分诊 32 个未归属 e2e（进 CI 2 个 → 26/64；其余 38 个全部登记 lane 与原因）
 - [x] Phase 1 · 2.1 `openMock()` 助手 + 新增约束（`test/helpers/mockPage.mjs`）
 - [x] Phase 1 · 4.2 新 e2e 归属守卫（`tools/e2e-lanes.mjs` + `test/ui/e2e-lanes.test.js`）
-- [ ] Phase 2 · 1.3 夜间素材 e2e job
-- [ ] Phase 2 · 2.2 smoke 的 sleep 清理
-- [ ] Phase 2 · 3.1 覆盖率基线
+- [x] Phase 2 · 1.3 夜间素材 e2e job（`.github/workflows/nightly.yml`；首轮定时执行待下一个周一）
+- [ ] Phase 2 · 2.2 smoke 的 sleep 清理（`ready-fold` 已改为 DOM 等待；其余按「随碰随改」）
+- [x] Phase 2 · 3.1 覆盖率基线（line 87.51% / branch 84.26% / funcs 87.99%）
 - [ ] Phase 3 · 1.4 / 5.x 被删行为补回

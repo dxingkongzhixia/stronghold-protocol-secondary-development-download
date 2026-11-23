@@ -170,6 +170,18 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 `test/ui/e2e-lanes.test.js` 把关。仍红的是 `bond-audio`、`community-controls`（346 s）、`i18n`（206 s）、
 `modal`、`playtest2`（>5 分钟挂起）、`playtest5-ui`、`playtest6-ui`、`stats-overlay-css`——待修或删。
 
+### 7.2 覆盖率基线（趋势，不设门槛）
+
+`npm run coverage` 只跑 `test/sim` + `test/content`，报告过滤 `server/sim` + `shared`；
+`test/sim/robustness.test.js` 被排除——它的预算是墙钟毫秒，插桩后必然失真（实测 0.62 vs 0.55 ms/tick），
+`--keep-perf` 可强制包含。
+
+| 日期 | line | branch | funcs |
+|---|---:|---:|---:|
+| 2026-11-23 | **87.51%** | **84.26%** | **87.99%** |
+
+用法：只对比趋势，**新模块 0% 是最有用的信号**；不设门槛、不为覆盖写无意义断言（`TESTING-PLAN.md` WS3）。
+
 ## 8. CI（`.github/workflows/ci.yml`）
 
 | job | 跑什么 | 说明 |
@@ -181,6 +193,10 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
 | `browser-smoke-pre` | `npm run test:browser:smoke -- --group pre` | 预游戏 + 大厅 + 本局信息 6 组，并行 job；截图 artifact |
 | `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 19 组 + 视觉契约，并行 job；截图 artifact |
+
+**夜间素材 lane**：`.github/workflows/nightly.yml` 每周一 02:00（北京）跑 `npm run test:e2e:assets`（真服务器 + 720 MB
+美术，5 个联机套件），上传 `test/e2e/out`；失败自动开一个 issue（已存在就不再开）。手动入口：Actions →
+**Nightly asset e2e** → Run workflow。这段不在 PR 阻塞链里（`docs/TESTING-PLAN.md` WS1.3）。
 
 ## 9. 新增测试放在哪
 

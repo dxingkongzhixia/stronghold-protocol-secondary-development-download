@@ -1,0 +1,66 @@
+name: Nightly asset e2e
+
+# The asset-backed browser lane: the room / match suites that need the real server and the 720 MB art pack
+# (tools/e2e-lanes.mjs ASSETS). They never run in PR CI — docs/TESTING-PLAN.md WS1.3 — so this weekly job is what
+# notices when 观战 / 替补 / 队友配装 breaks. Manual runs: Actions → Nightly asset e2e → Run workflow.
+
+on:
+  schedule:
+    # Monday 02:00 Beijing (Sunday 18:00 UTC).
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-asset-e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  assets:
+    name: asset e2e (real server + art)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (npm ci → postinstall copies public/vendor)
+        run: npm ci --no-audit --no-fund
+
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          install-chromedriver: false
+
+      # tools/e2e-assets.mjs sets SP_E2E=1 per file and resolves Chrome itself
+      - name: Asset e2e (standin, spectator, teammate-loadout, leftovers, watch-bonds)
+        run: npm run test:e2e:assets
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+
+      - name: Screenshots (evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asset-e2e-screens
+          path: test/e2e/out
+          if-no-files-found: ignore
+
+      # One open issue, not one per week: search first, create only when none is open.
+      - name: Open an issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$(gh issue list --state open --search '"nightly asset e2e" in:title' --json number --jq 'length')" = "0" ]; then
+            gh issue create \
+              --title "nightly asset e2e failed ($(date -u +%F))" \
+              --body "The weekly asset-backed browser lane failed (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). Download **asset-e2e-screens** from that run, then reproduce with \`npm run test:e2e:assets\` — docs/TESTING.md §8."
+          fi
