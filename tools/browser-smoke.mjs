@@ -9,10 +9,10 @@
 // checked). A missing Chrome is an error here, never a silent skip — the browser suites themselves skip when
 // `SP_E2E` is not 1 and the hardcoded macOS path does not exist, which is how a Windows machine ran none of them.
 //
-// The runs (~5 min sequentially; each file gets its own browser, so keep them sequential — headless pages contend).
+// The runs (~6–7 min sequentially; each file gets its own browser, so keep them sequential — headless pages contend).
 // Every entry is asset-free: the mock harness (public/dev/game-mock.html) and a server on port 0, never public/assets.
 // A failing suite does not stop the run: every suite still runs and the final summary lists each failure (the exit code
-// is non-zero if anything failed), so one red line never hides the other 17.
+// is non-zero if anything failed), so one red line never hides the others.
 //
 // pre-game and the hub:
 //   1. test/ui/protocol-boot.e2e.test.js — the pre-game screens (协议启动！/ 请选择策略) through public/dev/game-mock.html,
@@ -23,20 +23,26 @@
 //   5. test/ui/hotkeys.e2e.test.js — the in-match settings panel and its key rebinding (the mock's gear must be the
 //      settings one: `.gm__gear` matches four buttons there).
 //
-// in-match mock (shop, economy, round plates, co-op, settlement, boss):
-//   6.  test/ui/ready-fold.e2e.test.js        — 准备就绪 folds the shop bar, 取消准备 unfolds it
-//   7.  test/ui/shop-empty-slot.e2e.test.js   — the shop bar's empty slot (GitHub #332)
+// in-match mock (shop, economy, round plates, co-op, settlement, boss, drafts):
+//   6.  test/ui/ready-fold.e2e.test.js         — 准备就绪 folds the shop bar, 取消准备 unfolds it
+//   7.  test/ui/shop-empty-slot.e2e.test.js    — the shop bar's empty slot (GitHub #332)
 //   8.  one interaction test of test/ui/mock.e2e.test.js — buy / ready / emote / exit through a mocked match
-//   9.  test/ui/refresh-tap.e2e.test.js       — a lagging 刷新 pays once (GitHub #501)
-//   10. test/ui/quit-offline.e2e.test.js      — 退出 survives a half-open socket
-//   11. test/ui/spectator-roster.e2e.test.js  — the 观战者 capsule (GitHub #120)
-//   12. test/ui/match-popups.e2e.test.js      — the round / phase plates
-//   13. test/ui/resultbox.e2e.test.js         — the round's result box at settlement
-//   14. test/ui/downed-plate.e2e.test.js      — 「协议已失效」 for a downed teammate
-//   15. test/ui/terrain-tip.e2e.test.js       — the special-terrain tip (issue #184)
-//   16. test/ui/turn-popup.e2e.test.js        — the 机变「轮到你选」disc
-//   17. test/ui/boss-plates.e2e.test.js       — the leader rounds' plates and the run's end
-//   18. test/ui/visual-contract.e2e.test.js   — the visual contract: key surfaces exist, stay in the viewport, and
+//   9.  test/ui/refresh-tap.e2e.test.js        — a lagging 刷新 pays once (GitHub #501)
+//   10. test/ui/quit-offline.e2e.test.js       — 退出 survives a half-open socket
+//   11. test/ui/spectator-roster.e2e.test.js   — the 观战者 capsule (GitHub #120)
+//   12. test/ui/match-popups.e2e.test.js       — the round / phase plates
+//   13. test/ui/resultbox.e2e.test.js          — the round's result box at settlement
+//   14. test/ui/downed-plate.e2e.test.js       — 「协议已失效」 for a downed teammate
+//   15. test/ui/terrain-tip.e2e.test.js        — the special-terrain tip (issue #184)
+//   16. test/ui/facing.e2e.test.js             — the facing wheel's keyboard in the mock match
+//   17. test/ui/deploy-replay.e2e.test.js      — the round start's deploy replay (PR #416)
+//   18. test/ui/device-tip.e2e.test.js         — the stage-device tip (GitHub #228)
+//   19. test/ui/feedback1-gaps.e2e.test.js     — the 0.1.1 screen gaps (DESIGN §21.26)
+//   20. test/ui/feedback1-secret-shop.e2e.test.js — 机密商店 with the same item twice
+//   21. test/ui/feedback1-tactic.e2e.test.js   — 战术决策 with the same card twice
+//   22. test/ui/turn-popup.e2e.test.js         — the 机变「轮到你选」disc
+//   23. test/ui/boss-plates.e2e.test.js        — the leader rounds' plates and the run's end
+//   24. test/ui/visual-contract.e2e.test.js    — the visual contract: key surfaces exist, stay in the viewport, and
 //       the ready / selected / disabled / danger states still change what is drawn (mean-colour + geometry probes)
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -86,6 +92,12 @@ export const RUNS = [
   ['test/ui/resultbox.e2e.test.js'],
   ['test/ui/downed-plate.e2e.test.js'],
   ['test/ui/terrain-tip.e2e.test.js'],
+  ['test/ui/facing.e2e.test.js'],
+  ['test/ui/deploy-replay.e2e.test.js'],
+  ['test/ui/device-tip.e2e.test.js'],
+  ['test/ui/feedback1-gaps.e2e.test.js'],
+  ['test/ui/feedback1-secret-shop.e2e.test.js'],
+  ['test/ui/feedback1-tactic.e2e.test.js'],
   ['test/ui/turn-popup.e2e.test.js'],
   ['test/ui/boss-plates.e2e.test.js'],
   // the visual contract (surfaces + ready / selected / disabled / danger state probes)

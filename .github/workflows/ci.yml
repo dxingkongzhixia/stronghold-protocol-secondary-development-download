@@ -184,7 +184,7 @@ jobs:
           path: test/e2e/out/mobile
           if-no-files-found: ignore
 
-  # The browser smoke: 18 mock-harness suites that need no game assets (the main job keeps SP_E2E=0). test/ui has ~48
+  # The browser smoke: 24 mock-harness suites that need no game assets (the main job keeps SP_E2E=0). test/ui has ~48
   # e2e files in the same position; this job pins the ones that are green today, so a broken client module import, CSP
   # change, pre-game screen, shop/ready/co-op/settlement surface or a lost visual state is caught here instead of by
   # hand. Each file gets its own browser and they run sequentially (~5–6 min on a runner); keep the timeout above that.

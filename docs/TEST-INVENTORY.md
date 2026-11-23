@@ -6,13 +6,13 @@
 
 | 层 | 文件 | 用例（静态计数） |
 |---|---:|---:|
-| unit / integration | 902 | 8048 |
+| unit / integration | 903 | 8049 |
 | fast | 17 | 162 |
 | golden tests | 4 | 11 |
-| browser (opt-in) | 102 | 332 |
+| browser (opt-in) | 99 | 325 |
 | studio | 4 | 26 |
 | native (opt-in) | 3 | 5 |
-| **合计** | **1032** | **8584** |
+| **合计** | **1030** | **8578** |
 
 ## golden 语料文件
 
@@ -40,6 +40,12 @@
 - `test/ui/resultbox.e2e.test.js`
 - `test/ui/downed-plate.e2e.test.js`
 - `test/ui/terrain-tip.e2e.test.js`
+- `test/ui/facing.e2e.test.js`
+- `test/ui/deploy-replay.e2e.test.js`
+- `test/ui/device-tip.e2e.test.js`
+- `test/ui/feedback1-gaps.e2e.test.js`
+- `test/ui/feedback1-secret-shop.e2e.test.js`
+- `test/ui/feedback1-tactic.e2e.test.js`
 - `test/ui/turn-popup.e2e.test.js`
 - `test/ui/boss-plates.e2e.test.js`
 - `test/ui/visual-contract.e2e.test.js`

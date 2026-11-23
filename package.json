@@ -30,6 +30,7 @@
     "test:browser:smoke": "node tools/browser-smoke.mjs",
     "test:guard": "node tools/hang-guard.mjs",
     "test:inventory": "node tools/test-inventory.mjs",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include=server/sim/** --test-coverage-include=shared/** \"test/sim/**/*.test.js\" \"test/content/**/*.test.js\"",
     "complexity": "node tools/complexity.mjs",
     "complexity:check": "node tools/complexity.mjs --check",
     "test:e2e:assets": "node tools/e2e-assets.mjs",

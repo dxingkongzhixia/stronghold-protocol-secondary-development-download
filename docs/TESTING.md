@@ -19,7 +19,7 @@
 | 只改实现、行为不变 | 测试**不许动**；动了就是行为变了，回到上一行 |
 | 数据/文案/UI 结构变了 | 同一次改动更新对应断言；**不要**为了变绿而放宽断言或跳过 |
 | 功能删除 | 同一提交删除它的测试；不允许留下永久 skip |
-| 临时跳过 | `{ skip: '<原因>（issue #N）' }`——原因与工单号必须写出来，且要有恢复条件 |
+| 临时跳过 | `{ skip: '<原因>（issue #N）' }`——原因与工单号必须写出来，且要有恢复条件；带原因的 skip 受 `test/skip-budget.test.js` 的 44 条预算约束（只降不升） |
 | 移动 golden | 先归因（§6），代码与 golden 分两个提交 |
 | 新增/拆分/改名测试文件 | 跑 `npm run test:inventory` 重新生成清单（否则 `npm test` 会红） |
 | 函数变大 | 单函数**自有逻辑行**（扣除嵌套函数、注释和空行）超过 **300** 视为超预算：不得新增、不得变大；`npm run complexity:check` 对照 `tools/complexity-budget.json`，存量大函数只许缩小 |
@@ -66,11 +66,12 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 全量 | `npm test`（**不含 golden 语料**；`--test-timeout=600000` 兜底挂起；本地 full-match **6 seeds**） |
 | 发布前全量 | `MATCH_SEEDS=20 npm test` |
 | 快速档 | `npm run test:fast`（≤2 分钟） |
+| 覆盖率趋势 | `npm run coverage`（只统计 `server/sim` + `shared`；约 4–6 分钟，**只作趋势，不设门槛**） |
 | 单个 CI 分片 | `npm run test:shard -- 2`（1..4，与 `ci-shards.json` 同一张权重表） |
 | 单文件 / 单条 | `node --test test/match/bot.test.js` · `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden | `npm run test:golden` · `npm run golden` · `node tools/golden.mjs --update`（先归因） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim` |
-| 浏览器 smoke | `npm run test:browser:smoke`（18 组 mock，约 5–6 分钟，**不需要素材**） |
+| 浏览器 smoke | `npm run test:browser:smoke`（24 组 mock，约 6–7 分钟，**不需要素材**） |
 | 素材 e2e | `npm run test:e2e:assets`（需 `public/assets` + Chrome；`-- --native` 加三条 native） |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（整轮超时硬停 + 进程表，exit 3） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js` |
@@ -83,6 +84,8 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 
 为什么 `--test-concurrency=4`：默认按核数并行时，几十个 CPU 密集整局模拟互相抢核，lobby/心跳/限流会超时。
 本地想更稳可用 `--test-concurrency=1`；浏览器套件**默认顺序跑**（多页面 headless 会互相抢）。
+
+覆盖率的用法：看末尾 `all files` 的 line / branch 百分比与**新模块是否 0%**；不追求数字好看，也不为覆盖写无意义断言。
 
 ## 4. 写测试的约定
 
@@ -137,6 +140,26 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 测试“还在跑”其实挂起 | 单测死循环 / 泄漏的 server/browser | `--test-timeout=600000`；整轮用 `test:guard`（exit 3 需人工看） |
 | CI 上 `test/**` 大面积 skip | CI 显式 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §8 |
 | 浏览器套件 `networkidle0` 导航超时 | 页面预热 ~140 MiB 美术并探测远程镜像；冷缓存 / 断网时网络迟迟不空闲 | 改成 `domcontentloaded` + 显式 `waitForSelector`（见 `screen-fit.e2e.test.js`），不要靠「网络空闲」 |
+| 美术资源等不到（`/hudPanel/trans_*` 等） | 客户端先探 `/asset-mirrors.json` 里的远程镜像，每个 15 s；离线 / 冷中继时本地回退来不及 | 测试里把 `/asset-mirrors.json` 应答成 `{ sources: [], fullSources: [] }`，强制本地服务器供图 |
+
+### 7.1 浏览器套件分诊（2026-11-23）
+
+按「30 分钟修不好就删 / 裁」清理长期红、又不在 CI 的用例。**修掉的**：`feedback1-secret-shop` / `feedback1-tactic`
+（`networkidle0`），以及此前的 `screen-fit` / `mock.e2e` 的 emote/exit（同因）。
+
+**删 / 裁的**（连同重加条件）：
+
+| 用例 | 处理 | 原因 |
+|---|---|---|
+| `emotes.e2e` 的 in-match 气泡 | 删除该条（UI kit 用例保留） | mock 的 `variant=emote` 只在启动时 `store.set` 一次 emote，气泡 3 s 过期；冷缓存下对局页挂载晚于 3 s，`.team__bubble` 永远等不到（30 s 超时） |
+| `capsule-motion.e2e` | 删除文件（静态侧 `test/ui/capsule-motion.test.js` 保留） | 三条用例都读 `/hudPanel/trans_*` 资源条目；远程镜像探测离线时先超时（5×15 s），场景看起来永远没加载 |
+| `inspect-range.e2e` | 删除文件 | 注入真实 COMBAT 快照后点击单位：`.dpanel` 出现，但 `.ff-tile.is-range` 不再出现；需产品侧确认 COMBAT 下是否还应高亮攻击范围 |
+| `text-scale.e2e` | 删除文件 | **真实问题**：特大字号下商店栏高 **145 → 164 px**（`844×390` 的 field / canvas 不变）；此外无 `?e2e=1` 时大厅入口卡在标题。修好商店栏尺寸后按 `?e2e=1` + 显式 `enterLobby()` 重写 |
+
+重加条件：气泡类 → mock 每 ≤1.5 s 重发或延长 TTL；美术类 → 先强制本地供图（上一行）；行为类 → 产品确认后按新契约重写。
+
+**skip 预算**：`test/skip-budget.test.js` 统计**带原因的** skip 标记（`skip: '…'` / `t.skip(`，不含
+`skip: !ENABLED` 这类环境门），2026-11-23 为 **44**，只降不升；加一条 skip 必须同时删一条或下调预算。
 
 ## 8. CI（`.github/workflows/ci.yml`）
 
@@ -147,7 +170,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `tooling` | `npm run lint`（预算 203）+ `npm run complexity:check`（函数 300 行预算）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线 + 文档/打包门禁 | 轻量通道 |
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
-| `browser-smoke` | `npm run test:browser:smoke` | 18 组 mock（含一组视觉契约），无素材；缺 Chrome 直接报错 |
+| `browser-smoke` | `npm run test:browser:smoke` | 24 组 mock（含一组视觉契约），无素材；缺 Chrome 直接报错 |
 
 ## 9. 新增测试放在哪
 
