@@ -71,7 +71,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 单文件 / 单条 | `node --test test/match/bot.test.js` · `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden | `npm run test:golden` · `npm run golden` · `node tools/golden.mjs --update`（先归因） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim` |
-| 浏览器 smoke | `npm run test:browser:smoke`（24 组 mock，约 6–7 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
+| 浏览器 smoke | `npm run test:browser:smoke`（26 组 mock，两组并行后各 ≤5 分钟，**不需要素材**）· 分组：`-- --group pre\|match` |
 | 素材 e2e | `npm run test:e2e:assets`（需 `public/assets` + Chrome；`-- --native` 加三条 native） |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（整轮超时硬停 + 进程表，exit 3） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js` |
@@ -109,6 +109,10 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 - **场地视图异步挂载**：拖拽 / `piecePoint` / 画布点击前先 `waitForSelector('.gm canvas, .gm .ff-piece')`。
 - **渲染模式**：CI 无 GPU 用 SwiftShader；本机默认硬件（`CI=1` 或 `SP_GL=swiftshader` 才强制软件渲染）。
   观战复制体可能是 **DOM fallback**（没有 canvas）：画布点单位的断言按渲染模式跳过并记录，不要假装绿。
+- **打开 mock 页**：新用例用 `test/helpers/mockPage.mjs` 的 `openMock(page, { base, query })`（`domcontentloaded` + 显式
+  readiness），**不要再写 `networkidle0`**；需要本地供图时用 `localMirrors(page)`。存量随碰随改（`docs/TESTING-PLAN.md` 2.1）。
+- **e2e 归属**：每个 `test/ui/*.e2e.test.js` 必须属于且只属于一条 lane（smoke / assets / native / local），
+  由 `tools/e2e-lanes.mjs` 登记、`test/ui/e2e-lanes.test.js` 把关；新文件没有归属会红。
 - **视觉契约**：颜色断言只用计算样式，或**同一元素两个状态之间的均值色变化**（`test/ui/visual-contract.e2e.test.js`）；
   不做全图像素比对，截图（`test/e2e/out/`）只作证据。
 - **配装视图**：产品默认 `deck`；测试在 `localStorage['sp.pref.loadout.view'] = 'list'` 下使用列表选择器
@@ -161,6 +165,11 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 **skip 预算**：`test/skip-budget.test.js` 统计**带原因的** skip 标记（`skip: '…'` / `t.skip(`，不含
 `skip: !ENABLED` 这类环境门），2026-11-23 为 **44**，只降不升；加一条 skip 必须同时删一条或下调预算。
 
+**第二轮分诊（2026-11-23，32 个未归属）**：`match-info` / `round30-tools` 进 smoke；其余 30 个登记在
+[`tools/e2e-lanes.mjs`](../tools/e2e-lanes.mjs) 的 `LOCAL_ONLY`（真服务器 + 美术、慢、或红），由
+`test/ui/e2e-lanes.test.js` 把关。仍红的是 `bond-audio`、`community-controls`（346 s）、`i18n`（206 s）、
+`modal`、`playtest2`（>5 分钟挂起）、`playtest5-ui`、`playtest6-ui`、`stats-overlay-css`——待修或删。
+
 ## 8. CI（`.github/workflows/ci.yml`）
 
 | job | 跑什么 | 说明 |
@@ -170,8 +179,8 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `tooling` | `npm run lint`（预算 203）+ `npm run complexity:check`（函数 300 行预算）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线 + 文档/打包门禁 | 轻量通道 |
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
-| `browser-smoke-pre` | `npm run test:browser:smoke -- --group pre` | 预游戏 + 大厅 5 组，并行 job；截图 artifact |
-| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 18 组 + 视觉契约，并行 job；截图 artifact |
+| `browser-smoke-pre` | `npm run test:browser:smoke -- --group pre` | 预游戏 + 大厅 + 本局信息 6 组，并行 job；截图 artifact |
+| `browser-smoke-match` | `npm run test:browser:smoke -- --group match` | 局内 19 组 + 视觉契约，并行 job；截图 artifact |
 
 ## 9. 新增测试放在哪
 

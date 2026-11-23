@@ -82,6 +82,8 @@ export const RUNS = [
   ['test/ui/settings-entry.e2e.test.js'],
   ['test/ui/screen-fit.e2e.test.js'],
   ['test/ui/hotkeys.e2e.test.js'],
+  // + test/ui/match-info.e2e.test.js — the strategy draft's 本局信息 dialog (in the pre-game group: the draft is pre-battle)
+  ['test/ui/match-info.e2e.test.js'],
   // in-match mock (shop, economy, round plates, co-op, settlement, boss)
   ['test/ui/ready-fold.e2e.test.js'],
   ['test/ui/shop-empty-slot.e2e.test.js'],
@@ -99,6 +101,8 @@ export const RUNS = [
   ['test/ui/feedback1-gaps.e2e.test.js'],
   ['test/ui/feedback1-secret-shop.e2e.test.js'],
   ['test/ui/feedback1-tactic.e2e.test.js'],
+  // + test/ui/round30-tools.e2e.test.js — isolated component/tool fixtures in a real browser (8 s)
+  ['test/ui/round30-tools.e2e.test.js'],
   ['test/ui/turn-popup.e2e.test.js'],
   ['test/ui/boss-plates.e2e.test.js'],
   // the visual contract (surfaces + ready / selected / disabled / danger state probes)
@@ -112,6 +116,7 @@ export const PRE_GROUP = new Set([
   'test/ui/settings-entry.e2e.test.js',
   'test/ui/screen-fit.e2e.test.js',
   'test/ui/hotkeys.e2e.test.js',
+  'test/ui/match-info.e2e.test.js',
 ]);
 
 /**

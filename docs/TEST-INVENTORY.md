@@ -6,13 +6,13 @@
 
 | 层 | 文件 | 用例（静态计数） |
 |---|---:|---:|
-| unit / integration | 903 | 8049 |
+| unit / integration | 904 | 8050 |
 | fast | 17 | 162 |
 | golden tests | 4 | 11 |
 | browser (opt-in) | 99 | 325 |
 | studio | 4 | 26 |
 | native (opt-in) | 3 | 5 |
-| **合计** | **1030** | **8578** |
+| **合计** | **1031** | **8579** |
 
 ## golden 语料文件
 
@@ -30,6 +30,7 @@
 - `test/ui/settings-entry.e2e.test.js`
 - `test/ui/screen-fit.e2e.test.js`
 - `test/ui/hotkeys.e2e.test.js`
+- `test/ui/match-info.e2e.test.js`
 - `test/ui/ready-fold.e2e.test.js`
 - `test/ui/shop-empty-slot.e2e.test.js`
 - `test/ui/mock.e2e.test.js`
@@ -46,6 +47,7 @@
 - `test/ui/feedback1-gaps.e2e.test.js`
 - `test/ui/feedback1-secret-shop.e2e.test.js`
 - `test/ui/feedback1-tactic.e2e.test.js`
+- `test/ui/round30-tools.e2e.test.js`
 - `test/ui/turn-popup.e2e.test.js`
 - `test/ui/boss-plates.e2e.test.js`
 - `test/ui/visual-contract.e2e.test.js`

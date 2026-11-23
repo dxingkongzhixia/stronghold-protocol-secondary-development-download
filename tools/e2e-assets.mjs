@@ -15,15 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { resolveChrome } = await import(path.join(ROOT, 'tools', 'browser-smoke.mjs'));
+const { ASSETS, NATIVE } = await import(path.join(ROOT, 'tools', 'e2e-lanes.mjs'));
 
-const FILES = [
-  'test/ui/standin.e2e.test.js',
-  'test/ui/spectator.e2e.test.js',
-  'test/ui/teammate-loadout.e2e.test.js',
-  'test/ui/leftovers.e2e.test.js',
-  'test/ui/watch-bonds.e2e.test.js',
-];
-const NATIVE = ['test/ui/native-room.e2e.test.js', 'test/ui/native-room-bench.e2e.test.js', 'test/ui/native-room-fallback.e2e.test.js'];
 const withNative = process.argv.includes('--native');
 const chrome = resolveChrome();
 if (!chrome) {
@@ -31,7 +24,7 @@ if (!chrome) {
   process.exit(2);
 }
 const env = { ...process.env, CHROME_PATH: chrome, SP_E2E: '1', ...(withNative ? { SP_NATIVE_E2E: '1' } : {}) };
-const suites = [...FILES, ...(withNative ? NATIVE : [])];
+const suites = [...ASSETS, ...(withNative ? NATIVE : [])];
 const results = [];
 for (const file of suites) {
   console.log(`\n[e2e-assets] ${file}`);

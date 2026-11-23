@@ -19,20 +19,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RUNS } from './browser-smoke.mjs';
+import { ASSETS } from './e2e-lanes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT = 'docs/TEST-INVENTORY.md';
 
-/** The browser smoke files — the runner's own RUNS (the generated list cannot drift from what CI runs) — and the asset
- * lane (tools/e2e-assets.mjs FILES). */
+/** The browser smoke files — the runner's own RUNS (the generated list cannot drift from what CI runs). The asset lane
+ * comes from tools/e2e-lanes.mjs, the one place every e2e file's lane is written down. */
 export const SMOKE = RUNS.flat().filter((s) => s.endsWith('.js'));
-export const ASSETS = [
-  'test/ui/standin.e2e.test.js',
-  'test/ui/spectator.e2e.test.js',
-  'test/ui/teammate-loadout.e2e.test.js',
-  'test/ui/leftovers.e2e.test.js',
-  'test/ui/watch-bonds.e2e.test.js',
-];
+export { ASSETS };
 
 const walk = (dir, out = []) => {
   for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
