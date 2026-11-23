@@ -65,7 +65,10 @@ describe('in-match UI (mock harness, headless Chrome)', { skip: !ENABLED && 'set
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('requestfailed', (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url())) problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`); });
     page.on('response', (r) => { if (r.status() >= 400) problems.push(`http ${r.status()}: ${r.url()}`); });
-    await page.goto(`${base}/dev/game-mock.html?shot=1&render=${render}&${query}&e2e=1`, { waitUntil: 'networkidle0' });
+    // `domcontentloaded` rather than `networkidle0`: art/mirror traffic can keep the network busy past the navigation
+    // timeout on a cold cache or an offline machine (the smoke must stay green without internet). The wait below is the
+    // real readiness gate — the game screen has to be mounted.
+    await page.goto(`${base}/dev/game-mock.html?shot=1&render=${render}&${query}&e2e=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => !!document.querySelector('.screen:not(.gload)'), { timeout: 15000 });
     await new Promise((r) => setTimeout(r, 900));
     return { page, problems };

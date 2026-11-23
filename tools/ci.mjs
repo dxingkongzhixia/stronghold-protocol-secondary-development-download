@@ -68,7 +68,7 @@ export const STEPS = [
   { id: 'golden', ci: { job: 'golden', name: 'Golden — default data' }, npm: 'golden', describe: 'node tools/golden.mjs' },
   { id: 'golden-versions', ci: { job: 'golden', name: 'Golden — 规程 (act3autochess@V3_1)' }, describe: 'node tools/golden.mjs --version act3autochess@V3_1' },
   { id: 'mobile', ci: { job: 'mobile-audit', name: 'Mobile audit' }, npm: 'check:mobile', describe: 'node tools/mobile-audit.mjs' },
-  { id: 'browser-smoke', ci: { job: 'browser-smoke', name: 'Browser smoke (pre-game screens + one in-match interaction)' }, npm: 'test:browser:smoke', describe: 'node tools/browser-smoke.mjs' },
+  { id: 'browser-smoke', ci: { job: 'browser-smoke', name: 'Browser smoke (pre-game, in-match and the visual contract)' }, npm: 'test:browser:smoke', describe: 'node tools/browser-smoke.mjs' },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------

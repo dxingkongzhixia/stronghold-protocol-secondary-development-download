@@ -70,7 +70,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 单文件 / 单条 | `node --test test/match/bot.test.js` · `node --test --test-name-pattern="bench shed" test/match/bot-smarter.test.js` |
 | golden | `npm run test:golden` · `npm run golden` · `node tools/golden.mjs --update`（先归因） |
 | golden 归因 | `npm run golden:attrib -- --paths server/sim` |
-| 浏览器 smoke | `npm run test:browser:smoke`（6 组 mock，约 1.5–2.5 分钟，**不需要素材**） |
+| 浏览器 smoke | `npm run test:browser:smoke`（18 组 mock，约 5–6 分钟，**不需要素材**） |
 | 素材 e2e | `npm run test:e2e:assets`（需 `public/assets` + Chrome；`-- --native` 加三条 native） |
 | 挂起监视 | `npm run test:guard -- -- node --test --test-force-exit <file>`（整轮超时硬停 + 进程表，exit 3） |
 | 文档守卫 | `node --test test/docs-links.test.js test/docs-consistency.test.js test/docs-paths.test.js test/docs-mojibake.test.js test/docs-facts.test.js` |
@@ -106,6 +106,8 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 - **场地视图异步挂载**：拖拽 / `piecePoint` / 画布点击前先 `waitForSelector('.gm canvas, .gm .ff-piece')`。
 - **渲染模式**：CI 无 GPU 用 SwiftShader；本机默认硬件（`CI=1` 或 `SP_GL=swiftshader` 才强制软件渲染）。
   观战复制体可能是 **DOM fallback**（没有 canvas）：画布点单位的断言按渲染模式跳过并记录，不要假装绿。
+- **视觉契约**：颜色断言只用计算样式，或**同一元素两个状态之间的均值色变化**（`test/ui/visual-contract.e2e.test.js`）；
+  不做全图像素比对，截图（`test/e2e/out/`）只作证据。
 - **配装视图**：产品默认 `deck`；测试在 `localStorage['sp.pref.loadout.view'] = 'list'` 下使用列表选择器
   （`Client` / `appBoot` 已默认写入）。
 - **名字带“博士”前缀**：`pub.players[].name` 是 `博士凯尔希`；断言用后缀匹配，不要写死短名。
@@ -134,6 +136,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | 点击落在遮罩上 | 入口动画 / 美术资源弹窗 | `?e2e=1` + `appBoot` |
 | 测试“还在跑”其实挂起 | 单测死循环 / 泄漏的 server/browser | `--test-timeout=600000`；整轮用 `test:guard`（exit 3 需人工看） |
 | CI 上 `test/**` 大面积 skip | CI 显式 `SP_E2E=0` / `RENDER_E2E=0` | 预期行为，见 §8 |
+| 浏览器套件 `networkidle0` 导航超时 | 页面预热 ~140 MiB 美术并探测远程镜像；冷缓存 / 断网时网络迟迟不空闲 | 改成 `domcontentloaded` + 显式 `waitForSelector`（见 `screen-fit.e2e.test.js`），不要靠「网络空闲」 |
 
 ## 8. CI（`.github/workflows/ci.yml`）
 
@@ -144,7 +147,7 @@ CI 只守前三层 + smoke（§8）；素材与 native 是本地/夜间通道，
 | `tooling` | `npm run lint`（预算 203）+ `npm run complexity:check`（函数 300 行预算）+ `check:imports` + `typecheck` | 不跑游戏 |
 | `node 24 (guards)` | CI 布线 + 文档/打包门禁 | 轻量通道 |
 | `mobile-audit` | `npm run check:mobile` | 截图作 artifact |
-| `browser-smoke` | `npm run test:browser:smoke` | 6 组 mock，无素材；缺 Chrome 直接报错 |
+| `browser-smoke` | `npm run test:browser:smoke` | 18 组 mock（含一组视觉契约），无素材；缺 Chrome 直接报错 |
 
 ## 9. 新增测试放在哪
 

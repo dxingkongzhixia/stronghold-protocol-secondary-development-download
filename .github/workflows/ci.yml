@@ -184,13 +184,14 @@ jobs:
           path: test/e2e/out/mobile
           if-no-files-found: ignore
 
-  # The browser smoke: two mock-harness suites that need no game assets (public/assets is 720 MB, and the main job
-  # keeps SP_E2E=0). test/ui has 48 e2e files in the same position; this job pins the two that are green today so a
-  # broken client module import, CSP change or pre-game screen regression is caught here instead of by hand.
+  # The browser smoke: 18 mock-harness suites that need no game assets (the main job keeps SP_E2E=0). test/ui has ~48
+  # e2e files in the same position; this job pins the ones that are green today, so a broken client module import, CSP
+  # change, pre-game screen, shop/ready/co-op/settlement surface or a lost visual state is caught here instead of by
+  # hand. Each file gets its own browser and they run sequentially (~5–6 min on a runner); keep the timeout above that.
   browser-smoke:
     name: browser smoke (mock harness)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -208,7 +209,7 @@ jobs:
           install-chromedriver: false
 
       # tools/browser-smoke.mjs sets SP_E2E=1 and resolves Chrome (CHROME_PATH here, platform defaults locally)
-      - name: Browser smoke (pre-game screens + one in-match interaction)
+      - name: Browser smoke (pre-game, in-match and the visual contract)
         run: npm run test:browser:smoke
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}

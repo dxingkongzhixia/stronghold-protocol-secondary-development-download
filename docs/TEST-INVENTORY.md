@@ -9,10 +9,10 @@
 | unit / integration | 902 | 8048 |
 | fast | 17 | 162 |
 | golden tests | 4 | 11 |
-| browser (opt-in) | 101 | 326 |
+| browser (opt-in) | 102 | 332 |
 | studio | 4 | 26 |
 | native (opt-in) | 3 | 5 |
-| **合计** | **1031** | **8578** |
+| **合计** | **1032** | **8584** |
 
 ## golden 语料文件
 

@@ -9,16 +9,35 @@
 // checked). A missing Chrome is an error here, never a silent skip — the browser suites themselves skip when
 // `SP_E2E` is not 1 and the hardcoded macOS path does not exist, which is how a Windows machine ran none of them.
 //
-// The runs (~2.5 min sequentially; each file gets its own browser, so keep them sequential — headless pages contend):
+// The runs (~5 min sequentially; each file gets its own browser, so keep them sequential — headless pages contend).
+// Every entry is asset-free: the mock harness (public/dev/game-mock.html) and a server on port 0, never public/assets.
+// A failing suite does not stop the run: every suite still runs and the final summary lists each failure (the exit code
+// is non-zero if anything failed), so one red line never hides the other 17.
+//
+// pre-game and the hub:
 //   1. test/ui/protocol-boot.e2e.test.js — the pre-game screens (协议启动！/ 请选择策略) through public/dev/game-mock.html,
 //      including the no-art and reduced-motion variants: the client modules load, the CSP allows them, the screens render.
-//   2. test/ui/hotkeys.e2e.test.js — the in-match settings panel and its key rebinding (the mock's gear must be the
-//      settings one: `.gm__gear` matches four buttons there).
+//   2. test/ui/title-surfaces.e2e.test.js — 公告 / 关于本服务器 and the PWA install offer (manifest + beforeinstallprompt).
 //   3. test/ui/settings-entry.e2e.test.js — the lobby (hub) and room settings entries, the modal and bug提交.
 //   4. test/ui/screen-fit.e2e.test.js — 异形屏适配: the inset box and the touch-only settings section (hasTouch).
-//   5. test/ui/title-surfaces.e2e.test.js — 公告 / 关于本服务器 and the PWA install offer (manifest + beforeinstallprompt).
-//   6. one interaction test of test/ui/mock.e2e.test.js (in-match mock): buy / ready / emote / exit through a mocked
-//      match — the cheapest check that the in-match UI still boots and responds.
+//   5. test/ui/hotkeys.e2e.test.js — the in-match settings panel and its key rebinding (the mock's gear must be the
+//      settings one: `.gm__gear` matches four buttons there).
+//
+// in-match mock (shop, economy, round plates, co-op, settlement, boss):
+//   6.  test/ui/ready-fold.e2e.test.js        — 准备就绪 folds the shop bar, 取消准备 unfolds it
+//   7.  test/ui/shop-empty-slot.e2e.test.js   — the shop bar's empty slot (GitHub #332)
+//   8.  one interaction test of test/ui/mock.e2e.test.js — buy / ready / emote / exit through a mocked match
+//   9.  test/ui/refresh-tap.e2e.test.js       — a lagging 刷新 pays once (GitHub #501)
+//   10. test/ui/quit-offline.e2e.test.js      — 退出 survives a half-open socket
+//   11. test/ui/spectator-roster.e2e.test.js  — the 观战者 capsule (GitHub #120)
+//   12. test/ui/match-popups.e2e.test.js      — the round / phase plates
+//   13. test/ui/resultbox.e2e.test.js         — the round's result box at settlement
+//   14. test/ui/downed-plate.e2e.test.js      — 「协议已失效」 for a downed teammate
+//   15. test/ui/terrain-tip.e2e.test.js       — the special-terrain tip (issue #184)
+//   16. test/ui/turn-popup.e2e.test.js        — the 机变「轮到你选」disc
+//   17. test/ui/boss-plates.e2e.test.js       — the leader rounds' plates and the run's end
+//   18. test/ui/visual-contract.e2e.test.js   — the visual contract: key surfaces exist, stay in the viewport, and
+//       the ready / selected / disabled / danger states still change what is drawn (mean-colour + geometry probes)
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -49,12 +68,27 @@ export function resolveChrome(env = process.env, platform = process.platform) {
 }
 
 const RUNS = [
+  // pre-game and the hub
   ['test/ui/protocol-boot.e2e.test.js'],
-  ['test/ui/hotkeys.e2e.test.js'],
+  ['test/ui/title-surfaces.e2e.test.js'],
   ['test/ui/settings-entry.e2e.test.js'],
   ['test/ui/screen-fit.e2e.test.js'],
-  ['test/ui/title-surfaces.e2e.test.js'],
+  ['test/ui/hotkeys.e2e.test.js'],
+  // in-match mock (shop, economy, round plates, co-op, settlement, boss)
+  ['test/ui/ready-fold.e2e.test.js'],
+  ['test/ui/shop-empty-slot.e2e.test.js'],
   ['--test-name-pattern=emote, exit', 'test/ui/mock.e2e.test.js'],
+  ['test/ui/refresh-tap.e2e.test.js'],
+  ['test/ui/quit-offline.e2e.test.js'],
+  ['test/ui/spectator-roster.e2e.test.js'],
+  ['test/ui/match-popups.e2e.test.js'],
+  ['test/ui/resultbox.e2e.test.js'],
+  ['test/ui/downed-plate.e2e.test.js'],
+  ['test/ui/terrain-tip.e2e.test.js'],
+  ['test/ui/turn-popup.e2e.test.js'],
+  ['test/ui/boss-plates.e2e.test.js'],
+  // the visual contract (surfaces + ready / selected / disabled / danger state probes)
+  ['test/ui/visual-contract.e2e.test.js'],
 ];
 
 const isMain = import.meta.url === new URL(process.argv[1] ?? '', 'file://').href || process.argv[1]?.endsWith('browser-smoke.mjs');
@@ -66,10 +100,23 @@ if (isMain) {
   }
   const env = { ...process.env, CHROME_PATH: chrome, SP_E2E: '1' };
   console.log(`[browser-smoke] Chrome ${chrome}`);
+  // Run every suite even when one fails: a single red suite must not hide the result of the other 17, and the summary
+  // below is what CI's log is read from. The exit code still fails the job when anything failed.
+  const results = [];
   for (const args of RUNS) {
     console.log(`[browser-smoke] node --test ${args.join(' ')}`);
+    const started = Date.now();
     const r = spawnSync(process.execPath, ['--test', '--test-timeout=600000', '--test-force-exit', ...args], { stdio: 'inherit', cwd: ROOT, env });
-    if (r.status !== 0) process.exit(r.status ?? 1);
+    const secs = Math.round((Date.now() - started) / 1000);
+    const code = r.status ?? 1;
+    results.push({ name: args.join(' '), code, secs });
+    console.log(`[browser-smoke] ${code === 0 ? 'PASS' : 'FAIL'} ${args.join(' ')} (${secs}s)\n`);
   }
-  console.log('[browser-smoke] ok');
+  const failed = results.filter((x) => x.code !== 0);
+  if (failed.length) {
+    console.error(`[browser-smoke] ${failed.length}/${results.length} suite(s) failed:`);
+    for (const f of failed) console.error(`  - ${f.name} (exit ${f.code}, ${f.secs}s)`);
+    process.exit(1);
+  }
+  console.log(`[browser-smoke] ok (${results.length} suites, ${results.reduce((s, x) => s + x.secs, 0)}s)`);
 }

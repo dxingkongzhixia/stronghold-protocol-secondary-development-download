@@ -39,7 +39,10 @@ describe('异形屏适配 (headless Chrome)', { skip: !ENABLED && 'set SP_E2E=1 
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     if (fit) await page.evaluateOnNewDocument((f) => { try { localStorage.setItem('sp.pref.screenFit', JSON.stringify(f)); } catch { /* ignore */ } }, fit);
-    await page.goto(`${base}/dev/game-mock.html?shot=1&${query}&e2e=1`, { waitUntil: 'networkidle0', timeout: 60000 });
+    // `domcontentloaded`, not `networkidle0`: the page warms ~140 MiB of art and probes the remote art mirrors, so
+    // network idle can sit past the 60 s navigation timeout on a cold cache or an offline machine (the smoke job must
+    // stay green without internet). Every caller waits for its own surface (`.gm__field canvas`, the settings section).
+    await page.goto(`${base}/dev/game-mock.html?shot=1&${query}&e2e=1`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     return { page, problems };
   }
 
